@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  db:
+    image: postgres:15-alpine
+    container_name: campusphoto_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: campusphoto
+      POSTGRES_USER: campusphoto_user
+      POSTGRES_PASSWORD: campusphoto_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - campusphoto_network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: campusphoto_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - campusphoto_network
+
+  # 后端 FastAPI 服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campusphoto_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://campusphoto_user:campusphoto_password@db:5432/campusphoto
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: your-secret-key-change-in-production
+      DEBUG: "false"
+      CORS_ORIGINS: http://localhost:3000,https://your-domain.com
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./static:/app/static
+    depends_on:
+      - db
+      - redis
+    networks:
+      - campusphoto_network
+
+  # 前端 Next.js 服务（开发环境）
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: campusphoto_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - campusphoto_network
+
+  # Nginx 反向代理（生产环境）
+  nginx:
+    image: nginx:alpine
+    container_name: campusphoto_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./static:/var/www/static
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - campusphoto_network
+    profiles:
+      - production
+
+  # Celery Worker（后台任务处理）
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campusphoto_celery
+    restart: unless-stopped
+    command: celery -A main.celery worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://campusphoto_user:campusphoto_password@db:5432/campusphoto
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: your-secret-key-change-in-production
+    volumes:
+      - ./uploads:/app/uploads
+      - ./static:/app/static
+    depends_on:
+      - db
+      - redis
+    networks:
+      - campusphoto_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  campusphoto_network:
+    driver: bridge
+
+
+

@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  db:
+    image: postgres:15-alpine
+    container_name: campusphoto_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: campusphoto
+      POSTGRES_USER: campusphoto_user
+      POSTGRES_PASSWORD: campusphoto_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - campusphoto_network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: campusphoto_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - campusphoto_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  campusphoto_network:
+    driver: bridge
+
+
+
