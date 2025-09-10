@@ -41,8 +41,12 @@ const mockNotifications = [
   },
 ]
 
-export function NotificationDropdown() {
-  const [isOpen, setIsOpen] = useState(false)
+interface NotificationDropdownProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
   const [notifications, setNotifications] = useState(mockNotifications)
 
   const unreadCount = notifications.filter(n => !n.isRead).length
@@ -78,7 +82,7 @@ export function NotificationDropdown() {
     <div className="relative">
       {/* Notification Bell */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={onClose}
         className="relative p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         {unreadCount > 0 ? (
@@ -185,7 +189,7 @@ export function NotificationDropdown() {
       {isOpen && (
         <div
           className="fixed inset-0 z-40"
-          onClick={() => setIsOpen(false)}
+          onClick={onClose}
         />
       )}
     </div>

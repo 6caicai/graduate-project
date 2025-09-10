@@ -1,11 +1,12 @@
 """
 FastAPI 主应用
 """
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from fastapi.responses import JSONResponse
 import logging
 import os
 
@@ -45,6 +46,7 @@ async def lifespan(app: FastAPI):
     
     # 创建上传目录
     os.makedirs("uploads", exist_ok=True)
+    os.makedirs("static", exist_ok=True)
     os.makedirs("static/thumbnails", exist_ok=True)
     
     logger.info("高校摄影系统启动完成")
@@ -65,6 +67,15 @@ app = FastAPI(
     redoc_url="/redoc" if settings.debug else None,
 )
 
+# 添加UTF-8编码中间件
+@app.middleware("http")
+async def add_utf8_headers(request: Request, call_next):
+    """添加UTF-8编码头"""
+    response = await call_next(request)
+    if response.headers.get("content-type", "").startswith("application/json"):
+        response.headers["Content-Type"] = "application/json; charset=utf-8"
+    return response
+
 # 添加CORS中间件
 app.add_middleware(
     CORSMiddleware,
@@ -82,7 +93,8 @@ if not settings.debug:
     )
 
 # 静态文件服务
-app.mount("/static", StaticFiles(directory="static"), name="static")
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 注册路由
 app.include_router(auth.router, prefix="/api/auth", tags=["认证"])
@@ -95,8 +107,9 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["分析"])
 
 
 @app.get("/")
-async def root():
+async def root(response: Response):
     """根路径"""
+    response.headers["Content-Type"] = "application/json; charset=utf-8"
     return {
         "message": "欢迎使用高校摄影系统 API",
         "version": settings.version,
@@ -106,8 +119,9 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
+async def health_check(response: Response):
     """健康检查"""
+    response.headers["Content-Type"] = "application/json; charset=utf-8"
     return {
         "status": "healthy",
         "service": "campusphoto-backend",
