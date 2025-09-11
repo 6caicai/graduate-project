@@ -1,0 +1,6 @@
+admin	admin123	管理员	admin@campusphoto.com	系统管理员
+student1	student123	学生	student1@campusphoto.com	热爱摄影的学生，喜欢记录校园生活
+student2	student123	学生	student2@campusphoto.com	摄影新手，正在学习构图和光线
+photographer1	photo123	摄影师	photographer1@campusphoto.com	专业摄影师，擅长人像和风景摄影
+photographer2	photo123	摄影师	photographer2@campusphoto.com	资深摄影师，专注于创意摄影和后期处理
+testuser	test123	学生	test@campusphoto.com	测试用户账号

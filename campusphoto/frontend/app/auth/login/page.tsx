@@ -31,10 +31,10 @@ export default function LoginPage() {
 
     try {
       await login(formData)
-      toast.success('登录成功！')
-      router.push('/')
+      // 登录成功后的跳转由useAuth处理
     } catch (error: any) {
-      toast.error(error.message || '登录失败，请检查用户名和密码')
+      console.error('Login error:', error)
+      // 错误处理由useAuth处理
     } finally {
       setIsLoading(false)
     }

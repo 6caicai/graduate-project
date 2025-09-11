@@ -12,6 +12,7 @@ import {
   FunnelIcon,
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline'
+// import { CampusPhotoApi } from '@/lib/api'
 
 // 模拟作品数据
 const mockPhotos = [
@@ -74,17 +75,64 @@ const themes = [
 ]
 
 export default function PhotosPage() {
-  const [photos, setPhotos] = useState(mockPhotos)
   const [filter, setFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('latest')
+  const [loading, setLoading] = useState(false)
+  const [photos, setPhotos] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  // 加载照片数据
+  const loadPhotos = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const response = await fetch('http://localhost:8000/api/photos/')
+      
+      if (response.ok) {
+        const data = await response.json()
+        
+        // 过滤掉可能无效的图片（基于已知的404图片）
+        const validPhotos = (data.items || []).filter((photo: any) => {
+          const filename = photo.image_url?.split('/')[-1] || ''
+          const invalidImages = [
+            'test_analysis_final.jpg', 'P1139746.JPG', 'test_student_6.jpg', 
+            'test_student_3.jpg', 'test_student_2.jpg', 'test_student_4.jpg', 
+            'test_student_5.jpg', 'test_student_1.jpg', 'test_image2.jpg', 
+            'test_admin_upload.jpg'
+          ]
+          return !invalidImages.includes(filename)
+        })
+        
+        setPhotos(validPhotos)
+      } else {
+        throw new Error(`API调用失败: ${response.status}`)
+      }
+    } catch (error) {
+      console.error('获取照片失败:', error)
+      setError(error instanceof Error ? error.message : '未知错误')
+      setPhotos([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 页面加载时自动加载照片
+  useEffect(() => {
+    loadPhotos()
+  }, [])
+
 
   const filteredPhotos = photos.filter(photo => {
     const matchesFilter = filter === 'all' || photo.theme === filter
     const matchesSearch = photo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         photo.user.username.toLowerCase().includes(searchQuery.toLowerCase())
+                         (photo.user?.username || '').toLowerCase().includes(searchQuery.toLowerCase())
     return matchesFilter && matchesSearch
   })
+
+  // 调试信息
+  console.log('当前状态 - photos数量:', photos.length, 'filteredPhotos数量:', filteredPhotos.length)
 
   const sortedPhotos = [...filteredPhotos].sort((a, b) => {
     switch (sortBy) {
@@ -115,6 +163,17 @@ export default function PhotosPage() {
     ))
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">加载作品中...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 py-8">
@@ -131,8 +190,26 @@ export default function PhotosPage() {
             <p className="text-gray-600 dark:text-gray-400 text-lg">
               发现精彩的摄影作品，与同学们分享你的创作
             </p>
+            <div className="mt-4">
+              <button
+                onClick={loadPhotos}
+                disabled={loading}
+                className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? '加载中...' : '刷新照片'}
+              </button>
+            </div>
           </motion.div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/30 rounded-lg">
+            <p className="text-sm text-red-800 dark:text-red-200">
+              加载照片失败: {error}
+            </p>
+          </div>
+        )}
 
         {/* Filters and Search */}
         <motion.div
@@ -194,6 +271,8 @@ export default function PhotosPage() {
           </div>
         </motion.div>
 
+        {/* Debug Info */}
+
         {/* Photos Grid */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -207,13 +286,22 @@ export default function PhotosPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: index * 0.1 }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer"
+              onClick={() => window.location.href = `/photos/${photo.id}`}
             >
               {/* Photo */}
               <div className="relative aspect-[4/3] bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/20 dark:to-purple-900/20">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <CameraIcon className="w-16 h-16 text-pink-500" />
-                </div>
+                {photo.image_url ? (
+                  <img
+                    src={photo.image_url.startsWith('http') ? photo.image_url : `http://localhost:8000${photo.image_url}`}
+                    alt={photo.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <CameraIcon className="w-16 h-16 text-pink-500" />
+                  </div>
+                )}
                 
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors">
@@ -228,7 +316,10 @@ export default function PhotosPage() {
                 <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="flex justify-between">
                     <button
-                      onClick={() => handleLike(photo.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleLike(photo.id)
+                      }}
                       className={`p-2 rounded-full transition-colors ${
                         photo.is_liked 
                           ? 'bg-red-500 text-white' 
@@ -238,7 +329,10 @@ export default function PhotosPage() {
                       <HeartIcon className={`w-5 h-5 ${photo.is_liked ? 'fill-current' : ''}`} />
                     </button>
                     <button
-                      onClick={() => handleFavorite(photo.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleFavorite(photo.id)
+                      }}
                       className={`p-2 rounded-full transition-colors ${
                         photo.is_favorited 
                           ? 'bg-yellow-500 text-white' 
@@ -262,9 +356,9 @@ export default function PhotosPage() {
                 <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-2">
                   <div className="flex items-center">
                     <div className="w-6 h-6 bg-gray-300 dark:bg-gray-600 rounded-full mr-2"></div>
-                    <span>{photo.user.username}</span>
+                    <span>{photo.user?.username || '未知用户'}</span>
                   </div>
-                  <span>{new Date(photo.uploaded_at).toLocaleDateString()}</span>
+                  <span>{new Date(photo.uploaded_at).toISOString().split('T')[0]}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
@@ -319,3 +413,4 @@ export default function PhotosPage() {
     </div>
   )
 }
+

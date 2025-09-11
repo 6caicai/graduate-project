@@ -7,6 +7,8 @@ from sqlalchemy import desc, func
 from typing import List, Optional
 import os
 import tempfile
+import shutil
+import time
 from datetime import datetime
 
 from models.database import get_db
@@ -15,24 +17,44 @@ from models.schemas import (
     PhotoCreate, PhotoInDB, PhotoDetail, PhotoUpdate, InteractionCreate,
     MessageResponse, PaginationParams, PaginatedResponse
 )
-from utils.auth import get_current_active_user, require_photographer, check_resource_owner
+from utils.auth import get_current_active_user, get_current_user, require_photographer, check_resource_owner
 from utils.image_analyzer import image_analyzer
 from utils.config_manager import get_config_manager
 
 router = APIRouter()
 
 
-@router.post("/upload", response_model=PhotoInDB)
-async def upload_photo(
-    file: UploadFile = File(...),
+@router.post("/upload", response_model=List[PhotoInDB])
+async def upload_photos(
+    files: List[UploadFile] = File(...),
     title: str = Form(...),
     description: Optional[str] = Form(None),
+    location: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),  # JSON string
+    is_public: bool = Form(True),
+    allow_comments: bool = Form(True),
+    allow_likes: bool = Form(True),
     competition_id: Optional[int] = Form(None),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """上传作品"""
+    import json
+    
     config_manager = get_config_manager()
+    
+    # 检查文件数量
+    if len(files) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="请至少上传一张图片"
+        )
+    
+    if len(files) > 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="最多只能上传10张图片"
+        )
     
     # 检查每日上传限制
     today = datetime.now().date()
@@ -41,29 +63,32 @@ async def upload_photo(
         func.date(Photo.uploaded_at) == today
     ).count()
     
-    daily_limit = config_manager.get_upload_limit()
-    if today_uploads >= daily_limit:
+    daily_limit = config_manager.get_upload_limit(current_user.role)
+    if today_uploads + len(files) > daily_limit:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"每日上传限制为 {daily_limit} 张"
+            detail=f"每日上传限制为 {daily_limit} 张，今日已上传 {today_uploads} 张"
         )
     
-    # 检查文件大小
+    # 检查每个文件
     max_size = config_manager.get_max_file_size()
-    if file.size > max_size:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"文件大小超过限制 ({max_size} bytes)"
-        )
-    
-    # 检查文件类型
     allowed_extensions = config_manager.get_allowed_extensions()
-    file_ext = file.filename.split('.')[-1].lower()
-    if file_ext not in allowed_extensions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"不支持的文件类型，支持: {', '.join(allowed_extensions)}"
-        )
+    
+    for file in files:
+        # 检查文件大小
+        if file.size > max_size:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"文件 {file.filename} 大小超过限制 ({max_size} bytes)"
+            )
+        
+        # 检查文件类型
+        file_ext = file.filename.split('.')[-1].lower()
+        if file_ext not in allowed_extensions:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"文件 {file.filename} 类型不支持，支持: {', '.join(allowed_extensions)}"
+            )
     
     # 检查比赛是否存在且开放投稿
     if competition_id:
@@ -79,51 +104,95 @@ async def upload_photo(
                 detail="比赛未开放投稿"
             )
     
-    # 保存临时文件
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}")
-    contents = await file.read()
-    temp_file.write(contents)
-    temp_file.close()
+    # 解析标签
+    tag_list = []
+    if tags:
+        try:
+            tag_list = json.loads(tags)
+        except json.JSONDecodeError:
+            tag_list = []
+    
+    # 处理每个文件
+    uploaded_photos = []
+    temp_files = []
     
     try:
-        # 图像分析
-        analysis_result = image_analyzer.analyze_image(temp_file.name)
+        for i, file in enumerate(files):
+            # 保存临时文件
+            file_ext = file.filename.split('.')[-1].lower()
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}")
+            contents = await file.read()
+            temp_file.write(contents)
+            temp_file.close()
+            temp_files.append(temp_file.name)
+            
+            # 图像分析
+            analysis_result = image_analyzer.analyze_image(temp_file.name)
+            
+            # 创建缩略图
+            thumbnail_path = image_analyzer.create_thumbnail(temp_file.name)
+            
+            # 保存文件到本地
+            upload_dir = "static/uploads"
+            thumbnail_dir = "static/thumbnails"
+            os.makedirs(upload_dir, exist_ok=True)
+            os.makedirs(thumbnail_dir, exist_ok=True)
+            
+            # 生成唯一文件名
+            file_ext = file.filename.split('.')[-1].lower()
+            unique_filename = f"{os.path.splitext(file.filename)[0]}_{i}_{int(time.time())}.{file_ext}"
+            
+            # 保存原图
+            final_image_path = os.path.join(upload_dir, unique_filename)
+            shutil.copy2(temp_file.name, final_image_path)
+            
+            # 保存缩略图
+            final_thumbnail_path = os.path.join(thumbnail_dir, f"{os.path.splitext(unique_filename)[0]}_thumb_300x300.jpg")
+            shutil.copy2(thumbnail_path, final_thumbnail_path)
+            
+            # 设置URL
+            image_url = f"/static/uploads/{unique_filename}"
+            thumbnail_url = f"/static/thumbnails/{os.path.basename(final_thumbnail_path)}"
+            
+            # 为每张图片创建单独的作品记录
+            photo_title = f"{title} ({i+1})" if len(files) > 1 else title
+            
+            # 创建作品记录
+            photo = Photo(
+                user_id=current_user.id,
+                title=photo_title,
+                description=description,
+                image_url=image_url,
+                thumbnail_url=thumbnail_url,
+                theme=analysis_result.get("theme"),
+                confidence=analysis_result.get("confidence"),
+                competition_id=competition_id,
+                is_approved=is_public  # 根据隐私设置决定是否需要审核
+            )
+            
+            db.add(photo)
+            uploaded_photos.append(photo)
         
-        # 创建缩略图
-        thumbnail_path = image_analyzer.create_thumbnail(temp_file.name)
-        
-        # 在实际项目中，这里应该上传到 Cloudflare R2
-        # 目前使用本地路径模拟
-        image_url = f"/static/uploads/{file.filename}"
-        thumbnail_url = f"/static/thumbnails/{os.path.basename(thumbnail_path)}"
-        
-        # 创建作品记录
-        photo = Photo(
-            user_id=current_user.id,
-            title=title,
-            description=description,
-            image_url=image_url,
-            thumbnail_url=thumbnail_url,
-            theme=analysis_result.get("theme"),
-            confidence=analysis_result.get("confidence"),
-            competition_id=competition_id
-        )
-        
-        db.add(photo)
         db.commit()
-        db.refresh(photo)
         
-        return PhotoInDB.model_validate(photo)
+        # 刷新所有照片对象
+        for photo in uploaded_photos:
+            db.refresh(photo)
+        
+        return [PhotoInDB.model_validate(photo) for photo in uploaded_photos]
         
     except Exception as e:
+        # 如果出错，回滚数据库事务
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"图片处理失败: {str(e)}"
         )
     finally:
         # 清理临时文件
-        if os.path.exists(temp_file.name):
-            os.unlink(temp_file.name)
+        for temp_file_path in temp_files:
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
 
 
 @router.get("/", response_model=PaginatedResponse)
@@ -177,7 +246,6 @@ async def get_photos(
 @router.get("/{photo_id}", response_model=PhotoDetail)
 async def get_photo_detail(
     photo_id: int,
-    current_user: Optional[User] = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """获取作品详情"""
@@ -194,23 +262,6 @@ async def get_photo_detail(
     
     # 增加浏览量
     photo.views += 1
-    
-    # 记录浏览交互
-    if current_user:
-        existing_view = db.query(Interaction).filter(
-            Interaction.user_id == current_user.id,
-            Interaction.photo_id == photo_id,
-            Interaction.type == "view"
-        ).first()
-        
-        if not existing_view:
-            view_interaction = Interaction(
-                user_id=current_user.id,
-                photo_id=photo_id,
-                type="view"
-            )
-            db.add(view_interaction)
-    
     db.commit()
     
     # 构建详细信息
@@ -218,25 +269,10 @@ async def get_photo_detail(
     photo_detail.user = photo.user
     photo_detail.competition = photo.competition
     
-    # 检查当前用户的交互状态
-    if current_user:
-        photo_detail.is_liked = db.query(Interaction).filter(
-            Interaction.user_id == current_user.id,
-            Interaction.photo_id == photo_id,
-            Interaction.type == "like"
-        ).first() is not None
-        
-        photo_detail.is_favorited = db.query(Interaction).filter(
-            Interaction.user_id == current_user.id,
-            Interaction.photo_id == photo_id,
-            Interaction.type == "favorite"
-        ).first() is not None
-        
-        photo_detail.is_voted = db.query(Interaction).filter(
-            Interaction.user_id == current_user.id,
-            Interaction.photo_id == photo_id,
-            Interaction.type == "vote"
-        ).first() is not None
+    # 设置默认的交互状态（未登录用户）
+    photo_detail.is_liked = False
+    photo_detail.is_favorited = False
+    photo_detail.is_voted = False
     
     return photo_detail
 

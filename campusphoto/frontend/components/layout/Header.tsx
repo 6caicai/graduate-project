@@ -21,6 +21,7 @@ import {
   Cog6ToothIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline'
+import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid'
 import { SearchModal } from '@/components/ui/SearchModal'
 import { NotificationDropdown } from '@/components/ui/NotificationDropdown'
 
@@ -44,6 +45,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(2) // 模拟未读通知数量
   const { theme, setTheme } = useTheme()
   const { user, isAuthenticated, logout } = useAuth()
   const router = useRouter()
@@ -125,9 +127,17 @@ export function Header() {
                       onClick={() => setNotificationOpen(!notificationOpen)}
                       className="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors relative"
                     >
-                      <BellIcon className="w-5 h-5" />
+                      {unreadCount > 0 ? (
+                        <BellSolidIcon className="w-5 h-5" />
+                      ) : (
+                        <BellIcon className="w-5 h-5" />
+                      )}
                       {/* Notification badge */}
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
                     </button>
                     <NotificationDropdown
                       isOpen={notificationOpen}

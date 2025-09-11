@@ -2,12 +2,15 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { useAuth } from '@/hooks/useAuth'
 import { 
   CameraIcon, 
   TrophyIcon, 
   CalendarIcon,
   ChartBarIcon,
-  ArrowRightIcon 
+  ArrowRightIcon,
+  PlusIcon,
+  UserCircleIcon
 } from '@heroicons/react/24/outline'
 
 const features = [
@@ -42,6 +45,8 @@ const features = [
 ]
 
 export function Hero() {
+  const { user, isAuthenticated } = useAuth()
+  
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Background Pattern */}
@@ -61,15 +66,35 @@ export function Hero() {
             className="space-y-6"
           >
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white">
-              <span className="block">发现美好瞬间</span>
-              <span className="block bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-                记录青春时光
-              </span>
+              {isAuthenticated ? (
+                <>
+                  <span className="block">欢迎回来，{user?.username}！</span>
+                  <span className="block bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
+                    继续你的创作之旅
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="block">发现美好瞬间</span>
+                  <span className="block bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
+                    记录青春时光
+                  </span>
+                </>
+              )}
             </h1>
             
             <p className="max-w-3xl mx-auto text-xl text-gray-600 dark:text-gray-300 leading-relaxed">
-              加入高校摄影社区，展示你的作品，参与精彩比赛，
-              预约专业摄影师，与同学们分享摄影的乐趣
+              {isAuthenticated ? (
+                <>
+                  探索更多精彩内容，上传新作品，参与比赛，
+                  预约摄影师，与社区互动交流
+                </>
+              ) : (
+                <>
+                  加入高校摄影社区，展示你的作品，参与精彩比赛，
+                  预约专业摄影师，与同学们分享摄影的乐趣
+                </>
+              )}
             </p>
           </motion.div>
 
@@ -80,20 +105,42 @@ export function Hero() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <Link
-              href="/auth/register"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl hover:from-primary-700 hover:to-secondary-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
-            >
-              立即加入
-              <ArrowRightIcon className="ml-2 w-5 h-5" />
-            </Link>
-            
-            <Link
-              href="/photos"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              浏览作品
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/upload"
+                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl hover:from-primary-700 hover:to-secondary-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                >
+                  <PlusIcon className="mr-2 w-5 h-5" />
+                  上传作品
+                </Link>
+                
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <UserCircleIcon className="mr-2 w-5 h-5" />
+                  个人中心
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/auth/register"
+                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl hover:from-primary-700 hover:to-secondary-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                >
+                  立即加入
+                  <ArrowRightIcon className="ml-2 w-5 h-5" />
+                </Link>
+                
+                <Link
+                  href="/photos"
+                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  浏览作品
+                </Link>
+              </>
+            )}
           </motion.div>
 
           {/* Statistics */}
@@ -155,28 +202,76 @@ export function Hero() {
         </motion.div>
 
         {/* Call to Action Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-          className="mt-24 text-center"
-        >
-          <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-3xl p-8 lg:p-12 text-white">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-              准备好展示你的摄影才华了吗？
-            </h2>
-            <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-              加入我们的摄影社区，与志同道合的朋友一起探索摄影的无限可能
-            </p>
-            <Link
-              href="/auth/register"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-primary-600 bg-white rounded-xl hover:bg-gray-50 transition-all duration-200 transform hover:scale-105 shadow-lg"
-            >
-              免费注册账号
-              <ArrowRightIcon className="ml-2 w-5 h-5" />
-            </Link>
-          </div>
-        </motion.div>
+        {!isAuthenticated ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="mt-24 text-center"
+          >
+            <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-3xl p-8 lg:p-12 text-white">
+              <h2 className="text-3xl lg:text-4xl font-bold mb-4">
+                准备好展示你的摄影才华了吗？
+              </h2>
+              <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
+                加入我们的摄影社区，与志同道合的朋友一起探索摄影的无限可能
+              </p>
+              <Link
+                href="/auth/register"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-primary-600 bg-white rounded-xl hover:bg-gray-50 transition-all duration-200 transform hover:scale-105 shadow-lg"
+              >
+                免费注册账号
+                <ArrowRightIcon className="ml-2 w-5 h-5" />
+              </Link>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="mt-24"
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 lg:p-12 shadow-lg border border-gray-200 dark:border-gray-700">
+              <div className="text-center">
+                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                  开始你的创作之旅
+                </h2>
+                <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+                  探索更多功能，发现精彩内容，与社区互动交流
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Link
+                    href="/upload"
+                    className="group p-6 bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-2xl hover:shadow-lg transition-all duration-300"
+                  >
+                    <PlusIcon className="w-8 h-8 text-pink-600 dark:text-pink-400 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">上传作品</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">分享你的摄影作品</p>
+                  </Link>
+                  
+                  <Link
+                    href="/competitions"
+                    className="group p-6 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-2xl hover:shadow-lg transition-all duration-300"
+                  >
+                    <TrophyIcon className="w-8 h-8 text-yellow-600 dark:text-yellow-400 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">参加比赛</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">参与精彩摄影比赛</p>
+                  </Link>
+                  
+                  <Link
+                    href="/photographers"
+                    className="group p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl hover:shadow-lg transition-all duration-300"
+                  >
+                    <CalendarIcon className="w-8 h-8 text-green-600 dark:text-green-400 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">预约拍摄</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">预约专业摄影师</p>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   )

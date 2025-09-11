@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     'currentUser',
     CampusPhotoApi.getCurrentUser,
     {
-      enabled: !!TokenManager.getToken(),
+      enabled: false, // 禁用自动查询，手动控制
       retry: false,
       onSuccess: (data) => {
         setUser(data)
@@ -52,7 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.push('/dashboard')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || '登录失败')
+      console.error('Login error:', error)
+      const errorMessage = error.response?.data?.detail || error.message || '登录失败'
+      toast.error(typeof errorMessage === 'string' ? errorMessage : '登录失败，请重试')
     },
   })
 
@@ -63,7 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.push('/auth/login')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || '注册失败')
+      console.error('Register error:', error)
+      const errorMessage = error.response?.data?.detail || error.message || '注册失败'
+      toast.error(typeof errorMessage === 'string' ? errorMessage : '注册失败，请重试')
     },
   })
 
@@ -93,17 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(storedUser)
     }
     
-    setIsLoading(false)
-  }, [])
-
-  // 更新loading状态
-  useEffect(() => {
-    if (!TokenManager.getToken()) {
+    // 延迟设置loading为false，确保组件有时间渲染
+    setTimeout(() => {
       setIsLoading(false)
-    } else {
-      setIsLoading(userLoading)
-    }
-  }, [userLoading])
+    }, 100)
+  }, [])
 
   const login = async (credentials: LoginCredentials) => {
     await loginMutation.mutateAsync(credentials)

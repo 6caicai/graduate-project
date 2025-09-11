@@ -21,8 +21,8 @@ class ConfigManager:
     def _load_default_configs(self):
         """加载默认配置"""
         self._cache = {
-            # 上传限制配置
-            "daily_upload_limit": {"value": 5, "enabled": True},
+            # 上传限制配置 - 所有用户无限制
+            "daily_upload_limit": {"value": 999999, "enabled": False},
             "max_file_size": {"value": 10485760, "enabled": True},  # 10MB
             "allowed_extensions": {"value": ["jpg", "jpeg", "png", "webp"], "enabled": True},
             
@@ -162,10 +162,10 @@ class ConfigManager:
         return result
     
     # 便捷方法
-    def get_upload_limit(self) -> int:
+    def get_upload_limit(self, user_role: str = None) -> int:
         """获取每日上传限制"""
-        config = self.get("daily_upload_limit", {"value": 5, "enabled": True})
-        return config.get("value", 5) if config.get("enabled", True) else 999
+        # 所有用户组都无限制，因为摄影师需要批量上传存储的图片
+        return 999999
     
     def get_ranking_weights(self) -> Dict[str, float]:
         """获取排行榜权重配置"""

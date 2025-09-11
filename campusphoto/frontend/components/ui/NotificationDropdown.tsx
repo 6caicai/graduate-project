@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BellIcon } from '@heroicons/react/24/outline'
-import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid'
 
 // 模拟通知数据
 const mockNotifications = [
@@ -79,27 +78,7 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
   }
 
   return (
-    <div className="relative">
-      {/* Notification Bell */}
-      <button
-        onClick={onClose}
-        className="relative p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-      >
-        {unreadCount > 0 ? (
-          <BellSolidIcon className="w-5 h-5" />
-        ) : (
-          <BellIcon className="w-5 h-5" />
-        )}
-        
-        {/* Badge */}
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {/* Dropdown */}
+    <>
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -184,7 +163,7 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
           </motion.div>
         )}
       </AnimatePresence>
-
+      
       {/* Click outside to close */}
       {isOpen && (
         <div
@@ -192,7 +171,7 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
           onClick={onClose}
         />
       )}
-    </div>
+    </>
   )
 }
 
