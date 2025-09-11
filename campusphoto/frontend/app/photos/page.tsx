@@ -190,15 +190,6 @@ export default function PhotosPage() {
             <p className="text-gray-600 dark:text-gray-400 text-lg">
               发现精彩的摄影作品，与同学们分享你的创作
             </p>
-            <div className="mt-4">
-              <button
-                onClick={loadPhotos}
-                disabled={loading}
-                className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? '加载中...' : '刷新照片'}
-              </button>
-            </div>
           </motion.div>
         </div>
 
@@ -270,8 +261,6 @@ export default function PhotosPage() {
             </select>
           </div>
         </motion.div>
-
-        {/* Debug Info */}
 
         {/* Photos Grid */}
         <motion.div
