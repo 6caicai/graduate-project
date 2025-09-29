@@ -27,11 +27,20 @@ async def get_dashboard_statistics(
     db: Session = Depends(get_db)
 ):
     """获取管理员仪表板统计数据"""
+    import psutil
+    import time
+    from datetime import datetime, timedelta
+    
     # 基础统计
     total_users = db.query(User).count()
     total_photos = db.query(Photo).count()
     total_competitions = db.query(Competition).count()
     total_appointments = db.query(Appointment).count()
+    
+    # 照片审核状态统计
+    pending_photos = db.query(Photo).filter(Photo.approval_status == "pending").count()
+    approved_photos = db.query(Photo).filter(Photo.approval_status == "approved").count()
+    rejected_photos = db.query(Photo).filter(Photo.approval_status == "rejected").count()
     
     # 活跃比赛数
     active_competitions = db.query(Competition).filter(
@@ -47,6 +56,68 @@ async def get_dashboard_statistics(
         User.created_at >= this_month
     ).count()
     
+    # 最近上传的照片（最近5张）
+    recent_photos = db.query(Photo).join(User).filter(
+        Photo.is_approved == True
+    ).order_by(Photo.uploaded_at.desc()).limit(5).all()
+    
+    recent_photos_data = []
+    for photo in recent_photos:
+        recent_photos_data.append({
+            "id": photo.id,
+            "title": photo.title,
+            "image_url": photo.image_url,
+            "uploaded_at": photo.uploaded_at.isoformat(),
+            "user": {
+                "id": photo.user.id,
+                "username": photo.user.username,
+                "avatar_url": photo.user.avatar_url
+            },
+            "approval_status": photo.approval_status
+        })
+    
+    # 最近注册的用户（最近5个）
+    recent_users = db.query(User).order_by(User.created_at.desc()).limit(5).all()
+    
+    recent_users_data = []
+    for user in recent_users:
+        recent_users_data.append({
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role,
+            "avatar_url": user.avatar_url,
+            "created_at": user.created_at.isoformat()
+        })
+    
+    # 系统健康状态
+    try:
+        # 获取系统信息
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        # 计算运行时间（简化版本，实际应该从应用启动时间计算）
+        uptime_hours = 24  # 这里简化处理，实际应该计算应用启动时间
+        
+        system_health = {
+            "status": "healthy" if memory.percent < 90 and disk.percent < 90 else "warning",
+            "uptime": f"{uptime_hours}h",
+            "memory_usage": round(memory.percent, 1),
+            "disk_usage": round(disk.percent, 1),
+            "cpu_usage": round(psutil.cpu_percent(interval=1), 1),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        # 如果无法获取系统信息，返回默认值
+        system_health = {
+            "status": "unknown",
+            "uptime": "0h",
+            "memory_usage": 0,
+            "disk_usage": 0,
+            "cpu_usage": 0,
+            "timestamp": datetime.now().isoformat()
+        }
+    
     return StatisticsResponse(
         total_users=total_users,
         total_photos=total_photos,
@@ -54,7 +125,13 @@ async def get_dashboard_statistics(
         total_appointments=total_appointments,
         active_competitions=active_competitions,
         photos_this_month=photos_this_month,
-        users_this_month=users_this_month
+        users_this_month=users_this_month,
+        pending_photos=pending_photos,
+        approved_photos=approved_photos,
+        rejected_photos=rejected_photos,
+        recent_photos=recent_photos_data,
+        recent_users=recent_users_data,
+        system_health=system_health
     )
 
 

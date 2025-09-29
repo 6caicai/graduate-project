@@ -327,6 +327,12 @@ class StatisticsResponse(BaseModel):
     active_competitions: int = 0
     photos_this_month: int = 0
     users_this_month: int = 0
+    pending_photos: int = 0
+    approved_photos: int = 0
+    rejected_photos: int = 0
+    recent_photos: List[dict] = []
+    recent_users: List[dict] = []
+    system_health: dict = {}
 
 
 # 图像分析相关模式

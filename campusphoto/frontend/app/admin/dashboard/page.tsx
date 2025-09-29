@@ -212,9 +212,13 @@ export default function AdminDashboardPage() {
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   stats?.system_health?.status === 'healthy' 
                     ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                    : stats?.system_health?.status === 'warning'
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
                     : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
                 }`}>
-                  {stats?.system_health?.status === 'healthy' ? '正常' : '异常'}
+                  {stats?.system_health?.status === 'healthy' ? '正常' : 
+                   stats?.system_health?.status === 'warning' ? '警告' : 
+                   stats?.system_health?.status === 'unknown' ? '未知' : '异常'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -224,6 +228,14 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between">
                 <span className="text-gray-700 dark:text-gray-300">内存使用</span>
                 <span className="font-semibold text-gray-900 dark:text-white">{stats?.system_health?.memory_usage || 0}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-700 dark:text-gray-300">磁盘使用</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{stats?.system_health?.disk_usage || 0}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-700 dark:text-gray-300">CPU使用</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{stats?.system_health?.cpu_usage || 0}%</span>
               </div>
             </div>
           </div>
