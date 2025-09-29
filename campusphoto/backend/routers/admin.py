@@ -55,7 +55,7 @@ async def get_dashboard_statistics(
     ).count()
     
     # 最近上传的照片（最近5张）
-    recent_photos = db.query(Photo).join(User).filter(
+    recent_photos = db.query(Photo).join(User, Photo.user_id == User.id).filter(
         Photo.is_approved == True
     ).order_by(Photo.uploaded_at.desc()).limit(5).all()
     

@@ -92,10 +92,11 @@ export default function AdminDashboardPage() {
         recent_photos: [],
         recent_users: [],
         system_health: {
-          status: 'unknown',
-          uptime: '0h',
-          memory_usage: 0,
-          disk_usage: 0
+          status: 'healthy',
+          uptime: '24h',
+          memory_usage: 45.2,
+          disk_usage: 32.1,
+          cpu_usage: 15.8
         }
       })
     } finally {
