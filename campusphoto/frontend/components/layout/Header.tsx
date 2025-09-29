@@ -15,14 +15,12 @@ import {
   UserIcon,
   HeartIcon,
   BellIcon,
-  MagnifyingGlassIcon,
   PlusIcon,
   ArrowRightOnRectangleIcon,
   Cog6ToothIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline'
 import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid'
-import { SearchModal } from '@/components/ui/SearchModal'
 import { NotificationDropdown } from '@/components/ui/NotificationDropdown'
 
 const navigation = [
@@ -44,7 +42,6 @@ const userNavigation = [
 export function Header() {
   const [mounted, setMounted] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(2) // 模拟未读通知数量
   const { theme, setTheme } = useTheme()
@@ -100,13 +97,6 @@ export function Header() {
 
             {/* Right side actions */}
             <div className="flex items-center space-x-4">
-              {/* Search Button */}
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
-              >
-                <MagnifyingGlassIcon className="w-5 h-5" />
-              </button>
 
               {/* Theme Toggle */}
               <button
@@ -312,12 +302,6 @@ export function Header() {
           )}
         </AnimatePresence>
       </header>
-
-      {/* Search Modal */}
-      <SearchModal
-        isOpen={searchOpen}
-        onClose={() => setSearchOpen(false)}
-      />
     </>
   )
 }
