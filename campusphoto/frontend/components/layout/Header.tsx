@@ -29,13 +29,14 @@ const navigation = [
   { name: '摄影比赛', href: '/competitions' },
   { name: '摄影师', href: '/photographers' },
   { name: '排行榜', href: '/rankings' },
+  { name: '预约服务', href: '/appointments' },
 ]
 
 const userNavigation = [
   { name: '个人中心', href: '/profile', icon: UserCircleIcon },
   { name: '我的作品', href: '/my-photos', icon: CameraIcon },
   { name: '我的上传', href: '/my-uploads', icon: CameraIcon },
-  { name: '我的预约', href: '/my-appointments', icon: HeartIcon },
+  { name: '我的预约', href: '/appointments', icon: HeartIcon },
   { name: '设置', href: '/settings', icon: Cog6ToothIcon },
 ]
 
