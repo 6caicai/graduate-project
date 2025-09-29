@@ -19,6 +19,7 @@ import {
   ArrowRightOnRectangleIcon,
   Cog6ToothIcon,
   UserCircleIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline'
 import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid'
 import { NotificationDropdown } from '@/components/ui/NotificationDropdown'
@@ -38,6 +39,14 @@ const userNavigation = [
   { name: '我的上传', href: '/my-uploads', icon: CameraIcon },
   { name: '我的预约', href: '/appointments', icon: HeartIcon },
   { name: '设置', href: '/settings', icon: Cog6ToothIcon },
+]
+
+const adminNavigation = [
+  { name: '管理仪表板', href: '/admin/dashboard', icon: Cog6ToothIcon },
+  { name: '用户管理', href: '/admin/users', icon: UserIcon },
+  { name: '照片管理', href: '/admin/photos', icon: CameraIcon },
+  { name: '照片审核', href: '/admin/approval', icon: CheckCircleIcon },
+  { name: '系统设置', href: '/admin/settings', icon: Cog6ToothIcon },
 ]
 
 export function Header() {
@@ -254,6 +263,27 @@ export function Header() {
                       <PlusIcon className="w-4 h-4" />
                       <span>上传作品</span>
                     </Link>
+
+                    {/* Admin Menu Items */}
+                    {user?.role === 'admin' && (
+                      <>
+                        <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          管理功能
+                        </div>
+                        {adminNavigation.map((item) => (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-pink-600 dark:hover:text-pink-400 px-3 py-2 text-base font-medium transition-colors"
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            <item.icon className="w-5 h-5" />
+                            <span>{item.name}</span>
+                          </Link>
+                        ))}
+                        <div className="border-t border-gray-200 dark:border-gray-600 my-2"></div>
+                      </>
+                    )}
 
                     {/* User Menu Items */}
                     {userNavigation.map((item) => (
