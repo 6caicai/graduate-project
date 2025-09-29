@@ -49,28 +49,41 @@ export default function CreateAppointmentPage() {
   const loadPhotographers = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('campusphoto_token')
-      if (!token) {
-        throw new Error('未找到认证令牌')
+      
+      // 检查是否在客户端环境
+      if (typeof window === 'undefined') {
+        console.log('Server-side rendering, skipping photographer load')
+        return
       }
 
+      const token = localStorage.getItem('campusphoto_token')
+      
       const response = await fetch('/api/users?role=photographer', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
         },
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || '获取摄影师列表失败')
+        const errorText = await response.text()
+        console.error('API response error:', response.status, errorText)
+        
+        // 尝试解析错误信息
+        try {
+          const errorData = JSON.parse(errorText)
+          throw new Error(errorData.error || '获取摄影师列表失败')
+        } catch {
+          throw new Error(`获取摄影师列表失败: ${response.status}`)
+        }
       }
 
       const data = await response.json()
       setPhotographers(data.items || [])
     } catch (err: any) {
-      toast.error(err.message)
       console.error('加载摄影师失败:', err)
+      toast.error(err.message)
+      setPhotographers([])
     } finally {
       setLoading(false)
     }
@@ -142,13 +155,22 @@ export default function CreateAppointmentPage() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || '创建预约失败')
+        const errorText = await response.text()
+        console.error('API response error:', response.status, errorText)
+        
+        // 尝试解析错误信息
+        try {
+          const errorData = JSON.parse(errorText)
+          throw new Error(errorData.error || '创建预约失败')
+        } catch {
+          throw new Error(`创建预约失败: ${response.status}`)
+        }
       }
 
       toast.success('预约创建成功！')
       router.push('/appointments')
     } catch (err: any) {
+      console.error('创建预约失败:', err)
       toast.error(err.message)
     } finally {
       setSubmitting(false)
