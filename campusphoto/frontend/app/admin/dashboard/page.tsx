@@ -34,6 +34,7 @@ interface DashboardStats {
     uptime: string
     memory_usage: number
     disk_usage: number
+    cpu_usage?: number
   }
 }
 

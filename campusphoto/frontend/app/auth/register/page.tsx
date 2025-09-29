@@ -81,7 +81,7 @@ export default function RegisterPage() {
         email: formData.email,
         password: formData.password,
         role: 'student',
-        bio: null
+         bio: undefined
       })
       toast.success('注册成功！请登录')
       router.push('/auth/login')
