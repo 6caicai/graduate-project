@@ -85,7 +85,7 @@ export default function UploadPage() {
       const response = await fetch('/api/photos/analyze-for-upload', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('campusphoto_token')}`
         },
         body: formData
       })

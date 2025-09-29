@@ -155,13 +155,9 @@ class ImageAnalyzer:
             # 将主题信息添加到特征中
             features["theme"] = theme
             
-            # 选择子分类
-            subcategories = self.subcategory_mapping.get(theme, [])
-            subcategory = self._select_subcategory(features, subcategories)
-            
             return {
                 "theme": theme,
-                "subcategory": subcategory,
+                "subcategory": None,  # 不返回子分类
                 "confidence": confidence
             }
         except Exception as e:
@@ -435,13 +431,9 @@ class ImageAnalyzer:
         theme = random.choice(themes)
         confidence = random.uniform(0.6, 0.9)
         
-        # 随机选择一个子分类
-        subcategories = self.subcategory_mapping.get(theme, [])
-        subcategory = random.choice(subcategories) if subcategories else None
-        
         return {
             "theme": theme, 
-            "subcategory": subcategory,
+            "subcategory": None,  # 不返回子分类
             "confidence": confidence
         }
     

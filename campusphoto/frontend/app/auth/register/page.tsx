@@ -22,8 +22,7 @@ export default function RegisterPage() {
     username: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    role: 'student' as 'student' | 'photographer'
+    confirmPassword: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -34,6 +33,35 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // 验证必填字段
+    if (!formData.username.trim()) {
+      toast.error('请输入用户名')
+      return
+    }
+    
+    if (!formData.email.trim()) {
+      toast.error('请输入邮箱')
+      return
+    }
+    
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      toast.error('请输入有效的邮箱地址')
+      return
+    }
+    
+    if (!formData.password) {
+      toast.error('请输入密码')
+      return
+    }
+    
+    // 验证密码长度
+    if (formData.password.length < 6) {
+      toast.error('密码长度至少6位')
+      return
+    }
     
     if (formData.password !== formData.confirmPassword) {
       toast.error('两次输入的密码不一致')
@@ -52,7 +80,8 @@ export default function RegisterPage() {
         username: formData.username,
         email: formData.email,
         password: formData.password,
-        role: formData.role
+        role: 'student',
+        bio: null
       })
       toast.success('注册成功！请登录')
       router.push('/auth/login')
@@ -159,22 +188,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Role Selection */}
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                用户类型 *
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className="block w-full px-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="student">学生</option>
-                <option value="photographer">摄影师</option>
-              </select>
-            </div>
 
             {/* Password Field */}
             <div>

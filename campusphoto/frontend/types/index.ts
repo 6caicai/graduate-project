@@ -21,7 +21,7 @@ export interface UserCreate {
   username: string
   email: string
   password: string
-  role: 'student' | 'photographer'
+  role: 'student'
   bio?: string
 }
 

@@ -9,6 +9,7 @@ import cv2
 from typing import Dict, List, Tuple, Optional
 from sklearn.cluster import KMeans
 import colorsys
+from .yolo_image_classifier import yolo_classifier
 
 logger = logging.getLogger(__name__)
 
@@ -31,24 +32,27 @@ class HybridImageClassifier:
         }
     
     def classify_image(self, image_path: str) -> Dict:
-        """混合分类方法"""
+        """混合分类方法 - 集成YOLO"""
         try:
-            # 加载图像
+            # 1. YOLO目标检测分类（优先级最高）
+            yolo_result = yolo_classifier.classify_image(image_path)
+            
+            # 如果YOLO检测到高置信度的目标，直接使用YOLO结果
+            if yolo_result['confidence'] > 0.7 and yolo_result['method'] == 'yolo':
+                logger.info(f"YOLO高置信度分类: {yolo_result['theme']} ({yolo_result['confidence']:.2f})")
+                return yolo_result
+            
+            # 2. 传统特征分析（作为补充）
             image = Image.open(image_path).convert('RGB')
             image_array = np.array(image)
             
-            # 1. 传统特征分析
             traditional_result = self._traditional_classification(image_array)
-            
-            # 2. 颜色分析
             color_result = self._color_based_classification(image_array)
-            
-            # 3. 纹理分析
             texture_result = self._texture_based_classification(image_array)
             
-            # 4. 综合决策
-            final_result = self._combine_classifications(
-                traditional_result, color_result, texture_result
+            # 3. 综合决策（结合YOLO和传统方法）
+            final_result = self._combine_classifications_with_yolo(
+                yolo_result, traditional_result, color_result, texture_result
             )
             
             return final_result
@@ -227,15 +231,69 @@ class HybridImageClassifier:
             avg_confidence = best_data["score"] / best_data["count"]
             final_confidence = min(avg_confidence, 0.95)
             
-            # 选择子分类
-            subcategories = self.subcategory_mapping.get(best_theme, [])
-            subcategory = subcategories[0] if subcategories else None
+            return {
+                "theme": best_theme,
+                "subcategory": None,  # 不返回子分类
+                "confidence": final_confidence,
+                "methods_used": best_data["methods"]
+            }
+        
+        # 默认分类
+        return self._fallback_classification()
+    
+    def _combine_classifications_with_yolo(self, yolo: Dict, traditional: Dict, color: Dict, texture: Dict) -> Dict:
+        """结合YOLO和传统方法的综合决策"""
+        results = [yolo, traditional, color, texture]
+        
+        # 统计每个主题的得分
+        theme_scores = {}
+        for result in results:
+            theme = result["theme"]
+            confidence = result["confidence"]
+            method = result.get("method", "unknown")
+            
+            if theme not in theme_scores:
+                theme_scores[theme] = {"score": 0, "count": 0, "methods": []}
+            
+            # 不同方法给予不同权重
+            weight = 1.0
+            if method == "yolo":
+                weight = 2.0  # YOLO权重最高
+            elif method == "traditional":
+                weight = 1.2
+            elif method == "color":
+                weight = 1.0
+            elif method == "texture":
+                weight = 0.8
+            elif method == "fallback":
+                weight = 0.5
+            
+            theme_scores[theme]["score"] += confidence * weight
+            theme_scores[theme]["count"] += 1
+            theme_scores[theme]["methods"].append(method)
+        
+        # 选择得分最高的主题
+        if theme_scores:
+            best_theme = max(theme_scores, key=lambda x: theme_scores[x]["score"])
+            best_data = theme_scores[best_theme]
+            
+            # 计算综合置信度
+            avg_confidence = best_data["score"] / best_data["count"]
+            final_confidence = min(avg_confidence, 0.95)
             
             return {
                 "theme": best_theme,
-                "subcategory": subcategory,
+                "subcategory": None,  # 不返回子分类
                 "confidence": final_confidence,
-                "methods_used": best_data["methods"]
+                "method": "hybrid_with_yolo",
+                "methods_used": best_data["methods"],
+                "details": {
+                    "yolo": yolo,
+                    "traditional": traditional,
+                    "color": color,
+                    "texture": texture,
+                    "theme_scores": theme_scores
+                }
             }
         
         # 默认分类
@@ -244,9 +302,10 @@ class HybridImageClassifier:
     def _fallback_classification(self) -> Dict:
         """回退分类"""
         return {
-            "theme": "自然与风景",
-            "subcategory": "花草",
+            "theme": "自然风光",
+            "subcategory": None,  # 不返回子分类
             "confidence": 0.6,
+            "method": "fallback",
             "methods_used": ["fallback"]
         }
 

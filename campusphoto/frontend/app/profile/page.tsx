@@ -71,7 +71,7 @@ export default function ProfilePage() {
     try {
       setLoading(true)
       
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('campusphoto_token')
       if (!token) {
         toast.error('请先登录')
         return
@@ -120,7 +120,7 @@ export default function ProfilePage() {
     if (!isAuthenticated || !user) return
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('campusphoto_token')
       if (!token) {
         toast.error('请先登录')
         return
