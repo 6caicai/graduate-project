@@ -68,10 +68,15 @@ const mockPhotos = [
 
 const themes = [
   { key: 'all', label: '全部' },
-  { key: '校园风光', label: '校园风光' },
-  { key: '人物肖像', label: '人物肖像' },
-  { key: '动物植物', label: '动物植物' },
-  { key: '创意摄影', label: '创意摄影' }
+  { key: '人物', label: '人物' },
+  { key: '自然与风景', label: '自然与风景' },
+  { key: '城市与建筑', label: '城市与建筑' },
+  { key: '动物与植物', label: '动物与植物' },
+  { key: '日常生活与物品', label: '日常生活与物品' },
+  { key: '艺术与抽象', label: '艺术与抽象' },
+  { key: '事件与活动', label: '事件与活动' },
+  { key: '商业与科技', label: '商业与科技' },
+  { key: '符号与图标', label: '符号与图标' }
 ]
 
 export default function PhotosPage() {
@@ -88,27 +93,42 @@ export default function PhotosPage() {
       setLoading(true)
       setError(null)
       
-      const response = await fetch('http://localhost:8000/api/photos/')
+      console.log('开始加载照片...')
       
-      if (response.ok) {
-        const data = await response.json()
-        
-        // 过滤掉可能无效的图片（基于已知的404图片）
-        const validPhotos = (data.items || []).filter((photo: any) => {
-          const filename = photo.image_url?.split('/')[-1] || ''
-          const invalidImages = [
-            'test_analysis_final.jpg', 'P1139746.JPG', 'test_student_6.jpg', 
-            'test_student_3.jpg', 'test_student_2.jpg', 'test_student_4.jpg', 
-            'test_student_5.jpg', 'test_student_1.jpg', 'test_image2.jpg', 
-            'test_admin_upload.jpg'
-          ]
-          return !invalidImages.includes(filename)
-        })
-        
-        setPhotos(validPhotos)
-      } else {
-        throw new Error(`API调用失败: ${response.status}`)
+      const response = await fetch('http://localhost:8000/api/photos/?page=1&size=20', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      console.log('API响应状态:', response.status)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+      
+      const data = await response.json()
+      console.log('API响应数据:', data)
+      
+      // 过滤掉可能无效的图片（基于已知的404图片）
+      const validPhotos = (data.items || []).filter((photo: any) => {
+        const filename = photo.image_url?.split('/').pop() || ''
+        const invalidImages = [
+          'test_analysis_final.jpg', 'P1139746.JPG', 'test_student_6.jpg', 
+          'test_student_3.jpg', 'test_student_2.jpg', 'test_student_4.jpg', 
+          'test_student_5.jpg', 'test_student_1.jpg', 'test_image2.jpg', 
+          'test_admin_upload.jpg'
+        ]
+        return !invalidImages.includes(filename)
+      }).map((photo: any) => ({
+        ...photo,
+        is_liked: false, // 默认未点赞
+        is_favorited: false, // 默认未收藏
+      }))
+      
+      console.log('有效照片数量:', validPhotos.length)
+      setPhotos(validPhotos)
     } catch (error) {
       console.error('获取照片失败:', error)
       setError(error instanceof Error ? error.message : '未知错误')

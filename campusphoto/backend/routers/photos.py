@@ -35,6 +35,8 @@ async def upload_photos(
     allow_comments: bool = Form(True),
     allow_likes: bool = Form(True),
     competition_id: Optional[int] = Form(None),
+    theme: Optional[str] = Form(None),  # 用户选择的主题
+    subcategory: Optional[str] = Form(None),  # 用户选择的子分类
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -164,10 +166,11 @@ async def upload_photos(
                 description=description,
                 image_url=image_url,
                 thumbnail_url=thumbnail_url,
-                theme=analysis_result.get("theme"),
+                theme=theme or analysis_result.get("theme"),  # 优先使用用户选择的主题
                 confidence=analysis_result.get("confidence"),
                 competition_id=competition_id,
-                is_approved=is_public  # 根据隐私设置决定是否需要审核
+                is_approved=False,  # 新上传的照片需要审核
+                approval_status="pending"  # 默认为待审核状态
             )
             
             db.add(photo)
@@ -195,6 +198,43 @@ async def upload_photos(
                 os.unlink(temp_file_path)
 
 
+@router.get("/my-uploads", response_model=PaginatedResponse)
+async def get_my_uploads(
+    pagination: PaginationParams = Depends(),
+    status_filter: Optional[str] = Query(None, description="按审核状态筛选: pending, approved, rejected"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """获取当前用户上传的照片（包括审核状态）"""
+    query = db.query(Photo).filter(Photo.user_id == current_user.id)
+    
+    # 按审核状态筛选
+    if status_filter:
+        query = query.filter(Photo.approval_status == status_filter)
+    
+    # 按上传时间倒序排列
+    query = query.order_by(desc(Photo.uploaded_at))
+    
+    # 获取总数
+    total = query.count()
+    
+    # 分页查询
+    photos = query.offset(pagination.offset).limit(pagination.size).all()
+    
+    # 转换为响应模型
+    photo_list = []
+    for photo in photos:
+        photo_dict = PhotoInDB.model_validate(photo).model_dump()
+        photo_list.append(photo_dict)
+    
+    return PaginatedResponse.create(
+        items=photo_list,
+        total=total,
+        page=pagination.page,
+        size=pagination.size
+    )
+
+
 @router.get("/", response_model=PaginatedResponse)
 async def get_photos(
     pagination: PaginationParams = Depends(),
@@ -206,7 +246,7 @@ async def get_photos(
     db: Session = Depends(get_db)
 ):
     """获取作品列表"""
-    query = db.query(Photo).filter(Photo.is_approved == True)
+    query = db.query(Photo).join(User, Photo.user_id == User.id).filter(Photo.is_approved == True)
     
     # 主题筛选
     if theme:
@@ -232,8 +272,21 @@ async def get_photos(
     # 分页查询
     photos = query.offset(pagination.offset).limit(pagination.size).all()
     
-    # 转换为响应模型
-    photo_list = [PhotoInDB.model_validate(photo) for photo in photos]
+    # 转换为响应模型，包含用户信息
+    photo_list = []
+    for photo in photos:
+        photo_dict = PhotoInDB.model_validate(photo).model_dump()
+        # 添加用户信息
+        if photo.user:
+            photo_dict['user'] = {
+                'id': photo.user.id,
+                'username': photo.user.username,
+                'avatar_url': photo.user.avatar_url,
+                'role': photo.user.role
+            }
+        else:
+            photo_dict['user'] = None
+        photo_list.append(photo_dict)
     
     return PaginatedResponse.create(
         items=photo_list,
@@ -455,6 +508,72 @@ async def get_photo_themes(db: Session = Depends(get_db)):
     theme_list = [theme[0] for theme in themes if theme[0]]
     
     return {"themes": theme_list}
+
+
+@router.get("/themes/categories")
+async def get_theme_categories():
+    """获取所有可用的主题分类"""
+    from utils.image_analyzer import image_analyzer
+    
+    return {
+        "categories": image_analyzer.theme_mapping,
+        "subcategories": image_analyzer.subcategory_mapping
+    }
+
+
+@router.post("/analyze-for-upload")
+async def analyze_image_for_upload(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user)
+):
+    """分析图片并提供智能推荐分类"""
+    try:
+        # 检查文件类型
+        if not file.content_type or not file.content_type.startswith('image/'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="请上传图片文件"
+            )
+        
+        # 保存临时文件
+        file_ext = file.filename.split('.')[-1].lower()
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}")
+        contents = await file.read()
+        temp_file.write(contents)
+        temp_file.close()
+        
+        try:
+            # 使用混合分类器进行分析
+            analysis_result = image_analyzer.analyze_image(temp_file.name)
+            
+            # 返回推荐结果
+            return {
+                "recommended_theme": analysis_result.get("theme", "艺术与符号"),
+                "recommended_subcategory": analysis_result.get("subcategory", "插画"),
+                "confidence": analysis_result.get("confidence", 0.6),
+                "available_themes": list(image_analyzer.theme_mapping.values()),
+                "available_subcategories": image_analyzer.subcategory_mapping.get(
+                    analysis_result.get("theme", "艺术与符号"), 
+                    ["插画", "纹理", "背景", "图案", "手绘", "数字艺术", "标志", "图表", "信息图", "UI元素"]
+                ),
+                "smart_tags": analysis_result.get("smart_tags", []),
+                "analysis_details": {
+                    "dominant_colors": analysis_result.get("dominant_colors", []),
+                    "quality_score": analysis_result.get("quality_score", 0.5),
+                    "composition": analysis_result.get("composition", {})
+                }
+            }
+        finally:
+            # 清理临时文件
+            if os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+                
+    except Exception as e:
+        print(f"图片分析失败: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"图片分析失败: {str(e)}"
+        )
 
 
 @router.get("/me/photos", response_model=PaginatedResponse)

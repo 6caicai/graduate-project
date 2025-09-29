@@ -97,10 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(storedUser)
     }
     
-    // 延迟设置loading为false，确保组件有时间渲染
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 100)
+    setIsLoading(false)
   }, [])
 
   const login = async (credentials: LoginCredentials) => {

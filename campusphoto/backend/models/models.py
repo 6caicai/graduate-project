@@ -23,7 +23,7 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # 关系
-    photos = relationship("Photo", back_populates="user")
+    photos = relationship("Photo", foreign_keys="Photo.user_id", back_populates="user")
     student_appointments = relationship("Appointment", foreign_keys="Appointment.student_id", back_populates="student")
     photographer_appointments = relationship("Appointment", foreign_keys="Appointment.photographer_id", back_populates="photographer")
     interactions = relationship("Interaction", back_populates="user")
@@ -47,15 +47,20 @@ class Photo(Base):
     votes = Column(Integer, default=0)  # 比赛投票数
     heat_score = Column(DECIMAL(10, 2), default=0)  # 热度分数
     competition_id = Column(Integer, ForeignKey("competitions.id"))
-    is_approved = Column(Boolean, default=True)  # 是否通过审核
+    is_approved = Column(Boolean, default=False)  # 是否通过审核
+    approval_status = Column(String(20), default="pending")  # pending, approved, rejected
+    approval_notes = Column(Text)  # 审核备注
+    approved_by = Column(Integer, ForeignKey("users.id"))  # 审核人ID
+    approved_at = Column(DateTime(timezone=True))  # 审核时间
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # 关系
-    user = relationship("User", back_populates="photos")
+    user = relationship("User", foreign_keys=[user_id], back_populates="photos")
     competition = relationship("Competition", back_populates="photos")
     interactions = relationship("Interaction", back_populates="photo")
     rankings = relationship("Ranking", back_populates="photo")
+    approver = relationship("User", foreign_keys=[approved_by])
 
 
 class Competition(Base):

@@ -320,3 +320,138 @@ async def get_my_statistics(
     
     return stats
 
+
+@router.get("/{user_id}", response_model=UserInDB)
+async def get_user_by_id(
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """获取用户详细信息（需要登录）"""
+    # 用户只能查看自己的信息，除非是管理员
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权访问其他用户信息"
+        )
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    return UserInDB.model_validate(user)
+
+
+@router.get("/{user_id}/stats")
+async def get_user_stats(
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """获取用户统计信息"""
+    # 用户只能查看自己的统计信息，除非是管理员
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权访问其他用户统计信息"
+        )
+    
+    # 获取用户照片统计
+    photos = db.query(Photo).filter(Photo.user_id == user_id).all()
+    
+    total_photos = len(photos)
+    total_likes = sum(photo.likes for photo in photos)
+    total_views = sum(photo.views for photo in photos)
+    total_favorites = sum(photo.favorites for photo in photos)
+    
+    # 计算平均评分（基于热度分数）
+    if photos:
+        average_rating = sum(photo.heat_score for photo in photos) / len(photos)
+    else:
+        average_rating = 0.0
+    
+    # 计算排名（基于总热度）
+    total_heat = sum(photo.heat_score for photo in photos)
+    users_with_higher_heat = db.query(User).join(Photo).group_by(User.id).having(
+        func.sum(Photo.heat_score) > total_heat
+    ).count()
+    rank = users_with_higher_heat + 1
+    
+    return {
+        "total_photos": total_photos,
+        "total_likes": total_likes,
+        "total_views": total_views,
+        "total_favorites": total_favorites,
+        "average_rating": average_rating,
+        "rank": rank
+    }
+
+
+@router.get("/{user_id}/photos")
+async def get_user_photos(
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """获取用户照片列表"""
+    # 用户只能查看自己的照片，除非是管理员
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权访问其他用户照片"
+        )
+    
+    photos = db.query(Photo).filter(Photo.user_id == user_id).order_by(Photo.uploaded_at.desc()).all()
+    
+    return [
+        {
+            "id": photo.id,
+            "title": photo.title,
+            "image_url": photo.image_url,
+            "thumbnail_url": photo.thumbnail_url,
+            "theme": photo.theme,
+            "likes": photo.likes,
+            "views": photo.views,
+            "heat_score": photo.heat_score,
+            "uploaded_at": photo.uploaded_at.isoformat() if photo.uploaded_at else None
+        }
+        for photo in photos
+    ]
+
+
+@router.put("/{user_id}/profile", response_model=UserInDB)
+async def update_user_profile(
+    user_id: int,
+    profile_update: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """更新用户个人资料"""
+    # 用户只能更新自己的资料
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权更新其他用户资料"
+        )
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    # 更新允许的字段
+    allowed_fields = ["bio", "avatar_url"]
+    for field, value in profile_update.items():
+        if field in allowed_fields and hasattr(user, field):
+            setattr(user, field, value)
+    
+    db.commit()
+    db.refresh(user)
+    
+    return UserInDB.model_validate(user)
+

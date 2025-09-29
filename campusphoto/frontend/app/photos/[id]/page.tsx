@@ -8,7 +8,7 @@ import {
   HeartIcon,
   StarIcon,
   ShareIcon,
-  DownloadIcon,
+  ArrowDownTrayIcon,
   CameraIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline'

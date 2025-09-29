@@ -87,7 +87,11 @@ class PhotoInDB(PhotoBase):
     votes: int = 0
     heat_score: Decimal = 0
     competition_id: Optional[int] = None
-    is_approved: bool = True
+    is_approved: bool = False
+    approval_status: str = "pending"
+    approval_notes: Optional[str] = None
+    approved_by: Optional[int] = None
+    approved_at: Optional[datetime] = None
     uploaded_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -97,7 +101,21 @@ class PhotoDetail(PhotoInDB):
     competition: Optional['CompetitionInDB'] = None
     is_liked: bool = False
     is_favorited: bool = False
-    is_voted: bool = False
+
+
+# 审核相关模式
+class PhotoApprovalRequest(BaseModel):
+    approval_status: str = Field(..., pattern="^(approved|rejected)$")
+    approval_notes: Optional[str] = None
+
+
+class PhotoApprovalResponse(BaseModel):
+    id: int
+    approval_status: str
+    approval_notes: Optional[str] = None
+    approved_by: Optional[int] = None
+    approved_at: Optional[datetime] = None
+    message: str
 
 
 # 比赛相关模式

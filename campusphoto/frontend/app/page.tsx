@@ -9,31 +9,20 @@ import { PopularPhotographers } from '@/components/home/PopularPhotographers'
 import { Statistics } from '@/components/home/Statistics'
 import { PhotoThemes } from '@/components/home/PhotoThemes'
 
-export default function HomePage() {
-  const [mounted, setMounted] = useState(false)
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 }
+}
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return null
-  }
-
-  const fadeInUp = {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6 }
-  }
-
-  const staggerContainer = {
-    animate: {
-      transition: {
-        staggerChildren: 0.1
-      }
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
     }
   }
+}
 
+export default function HomePage() {
   return (
     <div className="space-y-12 lg:space-y-16">
       {/* 英雄区域 */}
@@ -52,27 +41,27 @@ export default function HomePage() {
         className="container mx-auto px-4 space-y-12 lg:space-y-16"
       >
         {/* 精选作品 */}
-        <motion.section variants={fadeInUp}>
+        <motion.section variants={fadeInUp} transition={{ duration: 0.6 }}>
           <FeaturedPhotos />
         </motion.section>
 
         {/* 活跃比赛 */}
-        <motion.section variants={fadeInUp}>
+        <motion.section variants={fadeInUp} transition={{ duration: 0.6 }}>
           <ActiveCompetitions />
         </motion.section>
 
         {/* 统计数据 */}
-        <motion.section variants={fadeInUp}>
+        <motion.section variants={fadeInUp} transition={{ duration: 0.6 }}>
           <Statistics />
         </motion.section>
 
         {/* 主题分类 */}
-        <motion.section variants={fadeInUp}>
+        <motion.section variants={fadeInUp} transition={{ duration: 0.6 }}>
           <PhotoThemes />
         </motion.section>
 
         {/* 热门摄影师 */}
-        <motion.section variants={fadeInUp}>
+        <motion.section variants={fadeInUp} transition={{ duration: 0.6 }}>
           <PopularPhotographers />
         </motion.section>
       </motion.div>

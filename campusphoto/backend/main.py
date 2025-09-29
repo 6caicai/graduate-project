@@ -13,7 +13,7 @@ import os
 from config import settings
 from models.database import create_tables, get_db
 from utils.config_manager import init_config_manager
-from routers import auth, users, photos, competitions, appointments, admin, analytics
+from routers import auth, users, photos, competitions, appointments, admin, analytics, rankings
 
 # 配置日志
 logging.basicConfig(
@@ -104,6 +104,7 @@ app.include_router(competitions.router, prefix="/api/competitions", tags=["比�
 app.include_router(appointments.router, prefix="/api/appointments", tags=["预约"])
 app.include_router(admin.router, prefix="/api/admin", tags=["管理"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["分析"])
+app.include_router(rankings.router, prefix="/api/rankings", tags=["排行榜"])
 
 
 @app.get("/")
