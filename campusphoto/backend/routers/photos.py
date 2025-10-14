@@ -36,12 +36,18 @@ async def upload_photos(
     allow_likes: bool = Form(True),
     competition_id: Optional[int] = Form(None),
     theme: Optional[str] = Form(None),  # 用户选择的主题
-    subcategory: Optional[str] = Form(None),  # 用户选择的子分类
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """上传作品"""
+    """上传作品 - 仅限摄影师和管理员"""
     import json
+    
+    # 检查用户角色权限 - 学生不能上传照片
+    if current_user.role == "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="学生用户没有上传照片的权限，请联系管理员申请摄影师身份"
+        )
     
     config_manager = get_config_manager()
     
@@ -205,7 +211,15 @@ async def get_my_uploads(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """获取当前用户上传的照片（包括审核状态）"""
+    """获取我的上传 - 仅限摄影师和管理员"""
+    
+    # 检查用户角色权限 - 学生不能查看上传记录
+    if current_user.role == "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="学生用户没有查看上传记录的权限"
+        )
+    
     query = db.query(Photo).filter(Photo.user_id == current_user.id)
     
     # 按审核状态筛选
@@ -337,7 +351,15 @@ async def update_photo(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """更新作品信息"""
+    """更新作品信息 - 仅限摄影师和管理员"""
+    
+    # 检查用户角色权限 - 学生不能更新照片
+    if current_user.role == "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="学生用户没有更新照片的权限"
+        )
+    
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
     if not photo:
         raise HTTPException(
@@ -369,7 +391,15 @@ async def delete_photo(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """删除作品"""
+    """删除作品 - 仅限摄影师和管理员"""
+    
+    # 检查用户角色权限 - 学生不能删除照片
+    if current_user.role == "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="学生用户没有删除照片的权限"
+        )
+    
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
     if not photo:
         raise HTTPException(
@@ -548,15 +578,10 @@ async def analyze_image_for_upload(
             
             # 返回推荐结果
             return {
-                "recommended_theme": analysis_result.get("theme", "艺术与符号"),
-                "recommended_subcategory": analysis_result.get("subcategory", "插画"),
+                "recommended_theme": analysis_result.get("theme", "人像"),
                 "confidence": analysis_result.get("confidence", 0.6),
                 "available_themes": list(image_analyzer.theme_mapping.values()),
-                "available_subcategories": image_analyzer.subcategory_mapping.get(
-                    analysis_result.get("theme", "艺术与符号"), 
-                    ["插画", "纹理", "背景", "图案", "手绘", "数字艺术", "标志", "图表", "信息图", "UI元素"]
-                ),
-                "smart_tags": analysis_result.get("smart_tags", []),
+                "smart_tags": analysis_result.get("tags", []),
                 "analysis_details": {
                     "dominant_colors": analysis_result.get("dominant_colors", []),
                     "quality_score": analysis_result.get("quality_score", 0.5),

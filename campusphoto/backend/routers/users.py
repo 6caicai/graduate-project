@@ -359,35 +359,85 @@ async def get_user_stats(
             detail="无权访问其他用户统计信息"
         )
     
-    # 获取用户照片统计
-    photos = db.query(Photo).filter(Photo.user_id == user_id).all()
+    # 获取目标用户信息
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
     
-    total_photos = len(photos)
-    total_likes = sum(photo.likes for photo in photos)
-    total_views = sum(photo.views for photo in photos)
-    total_favorites = sum(photo.favorites for photo in photos)
-    
-    # 计算平均评分（基于热度分数）
-    if photos:
-        average_rating = sum(photo.heat_score for photo in photos) / len(photos)
+    # 根据用户角色返回不同的统计信息
+    if target_user.role == "student":
+        # 学生用户：只返回预约相关统计
+        from models.models import Appointment
+        
+        # 预约统计
+        total_appointments = db.query(Appointment).filter(Appointment.student_id == user_id).count()
+        completed_appointments = db.query(Appointment).filter(
+            Appointment.student_id == user_id,
+            Appointment.status == "completed"
+        ).count()
+        pending_appointments = db.query(Appointment).filter(
+            Appointment.student_id == user_id,
+            Appointment.status == "pending"
+        ).count()
+        
+        # 互动统计（点赞、收藏、浏览其他用户的作品）
+        from models.models import Interaction
+        total_likes = db.query(Interaction).filter(
+            Interaction.user_id == user_id,
+            Interaction.type == "like"
+        ).count()
+        total_favorites = db.query(Interaction).filter(
+            Interaction.user_id == user_id,
+            Interaction.type == "favorite"
+        ).count()
+        total_views = db.query(Interaction).filter(
+            Interaction.user_id == user_id,
+            Interaction.type == "view"
+        ).count()
+        
+        return {
+            "total_appointments": total_appointments,
+            "completed_appointments": completed_appointments,
+            "pending_appointments": pending_appointments,
+            "total_likes": total_likes,
+            "total_favorites": total_favorites,
+            "total_views": total_views,
+            "average_rating": 0.0,  # 学生用户没有作品评分
+            "rank": 0  # 学生用户不参与排名
+        }
     else:
-        average_rating = 0.0
-    
-    # 计算排名（基于总热度）
-    total_heat = sum(photo.heat_score for photo in photos)
-    users_with_higher_heat = db.query(User).join(Photo).group_by(User.id).having(
-        func.sum(Photo.heat_score) > total_heat
-    ).count()
-    rank = users_with_higher_heat + 1
-    
-    return {
-        "total_photos": total_photos,
-        "total_likes": total_likes,
-        "total_views": total_views,
-        "total_favorites": total_favorites,
-        "average_rating": average_rating,
-        "rank": rank
-    }
+        # 摄影师和管理员：返回作品相关统计
+        photos = db.query(Photo).filter(Photo.user_id == user_id).all()
+        
+        total_photos = len(photos)
+        total_likes = sum(photo.likes for photo in photos)
+        total_views = sum(photo.views for photo in photos)
+        total_favorites = sum(photo.favorites for photo in photos)
+        
+        # 计算平均评分（基于热度分数）
+        if photos:
+            average_rating = sum(photo.heat_score for photo in photos) / len(photos)
+        else:
+            average_rating = 0.0
+        
+        # 计算排名（基于总热度）
+        total_heat = sum(photo.heat_score for photo in photos)
+        users_with_higher_heat = db.query(User).join(Photo).group_by(User.id).having(
+            func.sum(Photo.heat_score) > total_heat
+        ).count()
+        rank = users_with_higher_heat + 1
+        
+        return {
+            "total_photos": total_photos,
+            "total_likes": total_likes,
+            "total_views": total_views,
+            "total_favorites": total_favorites,
+            "average_rating": average_rating,
+            "rank": rank
+        }
 
 
 @router.get("/{user_id}/photos")

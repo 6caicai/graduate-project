@@ -97,7 +97,7 @@ export default function AdminApprovalPage() {
     setLoading(true)
     try {
       const token = TokenManager.getToken()
-      const response = await fetch(`/api/admin/photos/pending?page=${currentPage}&size=12`, {
+      const response = await fetch(`http://localhost:8000/api/admin/photos/pending?page=${currentPage}&size=12`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -125,7 +125,7 @@ export default function AdminApprovalPage() {
     
     try {
       const token = TokenManager.getToken()
-      const response = await fetch('/api/admin/photos/approval-stats', {
+      const response = await fetch('http://localhost:8000/api/admin/photos/approval-stats', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -166,7 +166,7 @@ export default function AdminApprovalPage() {
 
     try {
       const token = TokenManager.getToken()
-      const response = await fetch(`/api/admin/photos/${selectedPhoto.id}/approve`, {
+      const response = await fetch(`http://localhost:8000/api/admin/photos/${selectedPhoto.id}/approve`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -351,7 +351,7 @@ export default function AdminApprovalPage() {
                 <div key={photo.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
                   <div className="relative">
                     <img
-                      src={photo.image_url}
+                      src={`http://localhost:8000${photo.image_url}`}
                       alt={photo.title}
                       className="w-full h-48 object-cover"
                     />
@@ -382,7 +382,7 @@ export default function AdminApprovalPage() {
                         审核
                       </button>
                       <button
-                        onClick={() => window.open(photo.image_url, '_blank')}
+                        onClick={() => window.open(`http://localhost:8000${photo.image_url}`, '_blank')}
                         className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                       >
                         <EyeIcon className="w-4 h-4" />
@@ -436,7 +436,7 @@ export default function AdminApprovalPage() {
                   <div className="mt-4">
                     <div className="mb-4">
                       <img
-                        src={selectedPhoto.image_url}
+                        src={`http://localhost:8000${selectedPhoto.image_url}`}
                         alt={selectedPhoto.title}
                         className="w-full h-48 object-cover rounded-lg"
                       />

@@ -47,7 +47,7 @@ class ConfigManager:
             # 角色权限配置
             "role_permissions": {
                 "student": {
-                    "can_upload": True,
+                    "can_upload": False,  # 学生不能上传照片
                     "can_vote": True,
                     "can_comment": True,
                     "can_report": True

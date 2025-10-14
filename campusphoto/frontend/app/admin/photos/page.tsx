@@ -34,6 +34,14 @@ interface PaginatedResponse {
   size: number
 }
 
+// 可用的照片分类
+const PHOTO_CATEGORIES = [
+  '人像',
+  '动物与植物', 
+  '城市与建筑',
+  '自然风光'
+]
+
 export default function AdminPhotosPage() {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
@@ -45,6 +53,12 @@ export default function AdminPhotosPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [isInitialized, setIsInitialized] = useState(false)
+  
+  // 修改分类相关状态
+  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null)
+  const [newTheme, setNewTheme] = useState('')
+  const [newConfidence, setNewConfidence] = useState(0.8)
+  const [isUpdating, setIsUpdating] = useState(false)
 
   // 检查权限
   useEffect(() => {
@@ -81,6 +95,58 @@ export default function AdminPhotosPage() {
     
     return () => clearTimeout(timeout)
   }, [user, authLoading])
+
+  // 修改照片分类
+  const updatePhotoCategory = async () => {
+    if (!editingPhoto || !newTheme) {
+      toast.error('请选择新的分类')
+      return
+    }
+
+    try {
+      setIsUpdating(true)
+      const token = TokenManager.getToken()
+      if (!token) {
+        toast.error('请先登录')
+        return
+      }
+
+      const response = await fetch(`/api/admin/photos/${editingPhoto.id}/analysis`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          theme: newTheme,
+          confidence: newConfidence
+        })
+      })
+
+      if (response.ok) {
+        toast.success('照片分类修改成功')
+        setEditingPhoto(null)
+        setNewTheme('')
+        setNewConfidence(0.8)
+        loadPhotos() // 重新加载照片列表
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || '修改失败')
+      }
+    } catch (error) {
+      console.error('修改照片分类失败:', error)
+      toast.error('修改照片分类失败')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  // 打开修改分类模态框
+  const openEditModal = (photo: Photo) => {
+    setEditingPhoto(photo)
+    setNewTheme(photo.theme || '')
+    setNewConfidence(parseFloat(photo.confidence || '0.8'))
+  }
 
   // 加载照片
   const loadPhotos = async () => {
@@ -388,16 +454,29 @@ export default function AdminPhotosPage() {
                       <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
                         <span>ID: {photo.id}</span>
                         <span>用户ID: {photo.user_id}</span>
-                        <span>主题: {photo.theme || '未分类'}</span>
+                        <span className="flex items-center space-x-1">
+                          <span>主题:</span>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            photo.theme ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                          }`}>
+                            {photo.theme || '未分类'}
+                          </span>
+                        </span>
                         <span>上传时间: {new Date(photo.uploaded_at).toLocaleString()}</span>
                       </div>
                     </div>
 
                     {/* 操作按钮 */}
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex space-x-2">
+                      <button
+                        onClick={() => openEditModal(photo)}
+                        className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                      >
+                        修改分类
+                      </button>
                       <button
                         onClick={() => deletePhoto(photo.id)}
-                        className="px-4 py-2 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="px-3 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       >
                         删除
                       </button>
@@ -436,6 +515,93 @@ export default function AdminPhotosPage() {
           )}
         </div>
       </div>
+
+      {/* 修改分类模态框 */}
+      {editingPhoto && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              修改照片分类
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  照片标题
+                </label>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{editingPhoto.title}</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  当前分类
+                </label>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {editingPhoto.theme || '未分类'}
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  新分类
+                </label>
+                <select
+                  value={newTheme}
+                  onChange={(e) => setNewTheme(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">请选择分类</option>
+                  {PHOTO_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  置信度
+                </label>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1.0"
+                  step="0.1"
+                  value={newConfidence}
+                  onChange={(e) => setNewConfidence(parseFloat(e.target.value))}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span>0.1</span>
+                  <span className="font-medium">{newConfidence.toFixed(1)}</span>
+                  <span>1.0</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setEditingPhoto(null)
+                  setNewTheme('')
+                  setNewConfidence(0.8)
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={updatePhotoCategory}
+                disabled={isUpdating || !newTheme}
+                className="px-4 py-2 text-sm font-medium text-white bg-pink-600 rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isUpdating ? '保存中...' : '保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

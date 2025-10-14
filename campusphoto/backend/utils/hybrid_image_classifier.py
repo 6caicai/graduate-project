@@ -32,30 +32,24 @@ class HybridImageClassifier:
         }
     
     def classify_image(self, image_path: str) -> Dict:
-        """混合分类方法 - 集成YOLO"""
+        """混合分类方法 - 完全依赖YOLO"""
         try:
-            # 1. YOLO目标检测分类（优先级最高）
+            # 1. YOLO目标检测分类（唯一方法）
             yolo_result = yolo_classifier.classify_image(image_path)
             
-            # 如果YOLO检测到高置信度的目标，直接使用YOLO结果
-            if yolo_result['confidence'] > 0.7 and yolo_result['method'] == 'yolo':
-                logger.info(f"YOLO高置信度分类: {yolo_result['theme']} ({yolo_result['confidence']:.2f})")
+            # 如果YOLO检测到任何目标，直接使用YOLO结果
+            if yolo_result['method'] == 'yolo' and yolo_result.get('detections'):
+                logger.info(f"YOLO检测分类: {yolo_result['theme']} ({yolo_result['confidence']:.2f})")
                 return yolo_result
             
-            # 2. 传统特征分析（作为补充）
+            # 2. 如果YOLO没有检测到目标，回退到传统方法
+            logger.info("YOLO未检测到目标，使用传统方法")
             image = Image.open(image_path).convert('RGB')
             image_array = np.array(image)
             
             traditional_result = self._traditional_classification(image_array)
-            color_result = self._color_based_classification(image_array)
-            texture_result = self._texture_based_classification(image_array)
             
-            # 3. 综合决策（结合YOLO和传统方法）
-            final_result = self._combine_classifications_with_yolo(
-                yolo_result, traditional_result, color_result, texture_result
-            )
-            
-            return final_result
+            return traditional_result
             
         except Exception as e:
             logger.error(f"混合分类失败: {str(e)}")
@@ -258,7 +252,18 @@ class HybridImageClassifier:
             # 不同方法给予不同权重
             weight = 1.0
             if method == "yolo":
-                weight = 2.0  # YOLO权重最高
+                # 如果YOLO检测到动物，给予更高权重
+                if result.get('detections'):
+                    animal_detected = any(
+                        det['class_name'] in ['dog', 'cat', 'bear', 'bird', 'horse', 'sheep', 'cow', 'elephant', 'zebra', 'giraffe']
+                        for det in result['detections']
+                    )
+                    if animal_detected:
+                        weight = 3.0  # 检测到动物时给予最高权重
+                    else:
+                        weight = 2.0  # 其他YOLO检测
+                else:
+                    weight = 2.0
             elif method == "traditional":
                 weight = 1.2
             elif method == "color":

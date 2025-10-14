@@ -5,7 +5,7 @@ import cv2
 from ultralytics import YOLO
 
 # 打开图像
-img_path = "./test6.jpg"
+img_path = "./test3.jpg"
 
 # 打开图像
 img = cv2.imread(filename=img_path)

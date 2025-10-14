@@ -107,21 +107,24 @@ export function Hero() {
           >
             {isAuthenticated ? (
               <>
-                <Link
-                  href="/upload"
-                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl hover:from-primary-700 hover:to-secondary-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                >
-                  <PlusIcon className="mr-2 w-5 h-5" />
-                  上传作品
-                </Link>
+                {/* 仅摄影师和管理员显示上传按钮 */}
+                {(user?.role === 'photographer' || user?.role === 'admin') && (
+                  <Link
+                    href="/upload"
+                    className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl hover:from-primary-700 hover:to-secondary-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                  >
+                    <PlusIcon className="mr-2 w-5 h-5" />
+                    上传作品
+                  </Link>
+                )}
                 
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  <UserCircleIcon className="mr-2 w-5 h-5" />
-                  个人中心
-                </Link>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            <UserCircleIcon className="mr-2 w-5 h-5" />
+            个人中心
+          </Link>
               </>
             ) : (
               <>

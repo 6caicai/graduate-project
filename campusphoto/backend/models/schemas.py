@@ -101,6 +101,7 @@ class PhotoDetail(PhotoInDB):
     competition: Optional['CompetitionInDB'] = None
     is_liked: bool = False
     is_favorited: bool = False
+    is_voted: bool = False
 
 
 # 审核相关模式

@@ -64,7 +64,7 @@ export default function AdminDashboardPage() {
         throw new Error('未找到认证令牌')
       }
 
-      const response = await fetch('/api/admin/dashboard', {
+      const response = await fetch('http://localhost:8000/api/admin/dashboard', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

@@ -17,7 +17,12 @@ import {
   GlobeAltIcon,
   PhotoIcon,
   TrophyIcon,
-  FireIcon
+  FireIcon,
+  AcademicCapIcon,
+  BookOpenIcon,
+  UserGroupIcon,
+  ClockIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline'
 
 interface UserProfile {
@@ -32,12 +37,17 @@ interface UserProfile {
 }
 
 interface UserStats {
-  total_photos: number
-  total_likes: number
-  total_views: number
-  total_favorites: number
-  average_rating: number
-  rank: number
+  // 学生用户统计
+  total_appointments?: number
+  completed_appointments?: number
+  pending_appointments?: number
+  // 摄影师/管理员统计
+  total_photos?: number
+  total_likes?: number
+  total_views?: number
+  total_favorites?: number
+  average_rating?: number
+  rank?: number
 }
 
 interface UserPhoto {
@@ -52,11 +62,22 @@ interface UserPhoto {
   uploaded_at: string
 }
 
+interface Appointment {
+  id: number
+  photographer_name: string
+  photographer_avatar: string | null
+  service_type: string
+  scheduled_date: string
+  status: string
+  location: string | null
+}
+
 export default function ProfilePage() {
   const { user, isAuthenticated } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [stats, setStats] = useState<UserStats | null>(null)
   const [photos, setPhotos] = useState<UserPhoto[]>([])
+  const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -100,11 +121,21 @@ export default function ProfilePage() {
         setStats(statsData)
       }
 
-      // 获取用户照片
-      const photosResponse = await fetch(`/api/users/${user.id}/photos`, { headers })
-      if (photosResponse.ok) {
-        const photosData = await photosResponse.json()
-        setPhotos(photosData)
+      // 根据用户角色加载不同数据
+      if (user.role === 'student') {
+        // 学生用户：加载预约记录
+        const appointmentsResponse = await fetch(`/api/appointments/my`, { headers })
+        if (appointmentsResponse.ok) {
+          const appointmentsData = await appointmentsResponse.json()
+          setAppointments(appointmentsData)
+        }
+      } else {
+        // 摄影师和管理员：加载照片
+        const photosResponse = await fetch(`/api/users/${user.id}/photos`, { headers })
+        if (photosResponse.ok) {
+          const photosData = await photosResponse.json()
+          setPhotos(photosData)
+        }
       }
 
     } catch (error) {
@@ -189,7 +220,7 @@ export default function ProfilePage() {
           </h1>
         </div>
 
-        {/* Profile Card */}
+        {/* Profile Card - 简化版，只显示基本信息 */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-8">
           <div className="bg-gradient-to-r from-pink-500 to-purple-600 h-32"></div>
           
@@ -221,9 +252,12 @@ export default function ProfilePage() {
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                     profile?.role === 'admin' 
                       ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                      : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+                      : profile?.role === 'photographer'
+                      ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
+                      : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
                   }`}>
-                    {profile?.role === 'admin' ? '管理员' : '用户'}
+                    {profile?.role === 'admin' ? '管理员' : 
+                     profile?.role === 'photographer' ? '摄影师' : '学生'}
                   </span>
                 </div>
                 
@@ -290,130 +324,166 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center">
-              <PhotoIcon className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.total_photos}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">作品数</div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center">
-              <HeartIcon className="w-8 h-8 text-red-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.total_likes}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">获赞数</div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center">
-              <EyeIcon className="w-8 h-8 text-green-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.total_views}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">浏览量</div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center">
-              <StarIcon className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.total_favorites}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">收藏数</div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center">
-              <TrophyIcon className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                #{stats.rank}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">排名</div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center">
-              <FireIcon className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.average_rating.toFixed(1)}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">平均评分</div>
-            </div>
-          </div>
-        )}
-
-        {/* Photos Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-              我的作品 ({photos.length})
-            </h3>
-          </div>
-
-          {photos.length === 0 ? (
-            <div className="text-center py-12">
-              <PhotoIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                还没有上传任何作品
-              </p>
+        {/* Main Content - 根据用户角色显示不同内容 */}
+        {user?.role === 'student' ? (
+          // 学生用户：显示预约记录
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                我的预约 ({appointments.length})
+              </h3>
               <a
-                href="/upload"
+                href="/appointments/create"
                 className="inline-flex items-center px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
               >
-                <CameraIcon className="w-4 h-4 mr-2" />
-                上传第一张照片
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                新建预约
               </a>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {photos.map((photo) => (
-                <div
-                  key={photo.id}
-                  className="group cursor-pointer"
-                  onClick={() => window.location.href = `/photos/${photo.id}`}
+
+            {appointments.length === 0 ? (
+              <div className="text-center py-12">
+                <CalendarIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  还没有预约过任何拍摄服务
+                </p>
+                <a
+                  href="/appointments/create"
+                  className="inline-flex items-center px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
                 >
-                  <div className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden mb-3">
-                    {photo.image_url ? (
-                      <img
-                        src={photo.image_url.startsWith('http') ? photo.image_url : `http://localhost:8000${photo.image_url}`}
-                        alt={photo.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <PhotoIcon className="w-12 h-12 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <h4 className="font-medium text-gray-900 dark:text-white truncate">
-                      {photo.title}
-                    </h4>
-                    
-                    <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center">
-                          <HeartIcon className="w-4 h-4 mr-1" />
-                          <span>{photo.likes}</span>
+                  <CalendarIcon className="w-4 h-4 mr-2" />
+                  预约拍摄服务
+                </a>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {appointments.map((appointment) => (
+                  <div
+                    key={appointment.id}
+                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                          {appointment.photographer_avatar ? (
+                            <img
+                              src={appointment.photographer_avatar}
+                              alt={appointment.photographer_name}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <UserIcon className="w-6 h-6 text-gray-500" />
+                          )}
                         </div>
-                        <div className="flex items-center">
-                          <EyeIcon className="w-4 h-4 mr-1" />
-                          <span>{photo.views}</span>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 dark:text-white">
+                            {appointment.photographer_name}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {appointment.service_type}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-500">
+                            {new Date(appointment.scheduled_date).toLocaleString()}
+                          </p>
                         </div>
                       </div>
-                      <div className="flex items-center">
-                        <FireIcon className="w-4 h-4 mr-1" />
-                        <span>{photo.heat_score.toFixed(1)}</span>
+                      <div className="text-right">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          appointment.status === 'completed' 
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                            : appointment.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                        }`}>
+                          {appointment.status === 'completed' ? '已完成' : 
+                           appointment.status === 'pending' ? '待确认' : '已取消'}
+                        </span>
+                        {appointment.location && (
+                          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                            <MapPinIcon className="w-4 h-4 inline mr-1" />
+                            {appointment.location}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          // 摄影师和管理员：显示作品
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                我的作品 ({photos.length})
+              </h3>
             </div>
-          )}
-        </div>
+
+            {photos.length === 0 ? (
+              <div className="text-center py-12">
+                <PhotoIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  还没有上传任何作品
+                </p>
+                <a
+                  href="/upload"
+                  className="inline-flex items-center px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                >
+                  <CameraIcon className="w-4 h-4 mr-2" />
+                  上传第一张照片
+                </a>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {photos.map((photo) => (
+                  <div
+                    key={photo.id}
+                    className="group cursor-pointer"
+                    onClick={() => window.location.href = `/photos/${photo.id}`}
+                  >
+                    <div className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden mb-3">
+                      {photo.image_url ? (
+                        <img
+                          src={photo.image_url.startsWith('http') ? photo.image_url : `http://localhost:8000${photo.image_url}`}
+                          alt={photo.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <PhotoIcon className="w-12 h-12 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                        {photo.title}
+                      </h4>
+                      
+                      <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center">
+                            <HeartIcon className="w-4 h-4 mr-1" />
+                            <span>{photo.likes}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <EyeIcon className="w-4 h-4 mr-1" />
+                            <span>{photo.views}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          <FireIcon className="w-4 h-4 mr-1" />
+                          <span>{photo.heat_score.toFixed(1)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -327,7 +327,15 @@ async def join_competition(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """参加比赛"""
+    """参加比赛 - 仅限摄影师和管理员"""
+    
+    # 检查用户角色权限 - 学生不能参加比赛
+    if current_user.role == "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="学生用户没有参加比赛的权限，请联系管理员申请摄影师身份"
+        )
+    
     competition = db.query(Competition).filter(Competition.id == competition_id).first()
     if not competition:
         raise HTTPException(

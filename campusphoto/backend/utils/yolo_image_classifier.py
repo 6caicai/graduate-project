@@ -160,7 +160,7 @@ class YOLOImageClassifier:
             # YOLO推理
             results = self.model(image)
             
-            # 解析结果
+            # 解析结果 - 降低置信度阈值以捕获更多检测
             detections = []
             for result in results:
                 boxes = result.boxes
@@ -170,14 +170,16 @@ class YOLOImageClassifier:
                         class_id = int(boxes.cls[i])
                         confidence = float(boxes.conf[i])
                         
-                        # 获取类别名称
-                        class_name = result.names[class_id]
-                        
-                        detections.append({
-                            'class_name': class_name,
-                            'confidence': confidence,
-                            'class_id': class_id
-                        })
+                        # 降低置信度阈值，从0.5降到0.2
+                        if confidence >= 0.2:
+                            # 获取类别名称
+                            class_name = result.names[class_id]
+                            
+                            detections.append({
+                                'class_name': class_name,
+                                'confidence': confidence,
+                                'class_id': class_id
+                            })
             
             # 根据检测结果进行分类
             classification_result = self._classify_from_detections(detections)

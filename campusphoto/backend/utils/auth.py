@@ -143,9 +143,9 @@ def has_permission(user: User, action: str, resource: Any = None) -> bool:
     # 基于角色的权限控制
     permissions = {
         "student": [
-            "photo:create", "photo:read", "photo:update_own", "photo:delete_own",
+            "photo:read",  # 学生只能查看照片，不能上传
             "appointment:create", "appointment:read_own", "appointment:update_own",
-            "interaction:create", "interaction:read", "competition:participate",
+            "interaction:create", "interaction:read",  # 移除 competition:participate
             "profile:read", "profile:update_own"
         ],
         "photographer": [

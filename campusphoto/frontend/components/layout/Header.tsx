@@ -33,13 +33,20 @@ const navigation = [
   { name: '预约服务', href: '/appointments' },
 ]
 
-const userNavigation = [
-  { name: '个人中心', href: '/profile', icon: UserCircleIcon },
-  { name: '我的作品', href: '/my-photos', icon: CameraIcon },
-  { name: '我的上传', href: '/my-uploads', icon: CameraIcon },
-  { name: '我的预约', href: '/appointments', icon: HeartIcon },
-  { name: '设置', href: '/settings', icon: Cog6ToothIcon },
-]
+  const userNavigation = [
+    { name: '个人中心', href: '/dashboard', icon: UserCircleIcon },
+    { name: '我的预约', href: '/appointments', icon: HeartIcon },
+    { name: '设置', href: '/settings', icon: Cog6ToothIcon },
+  ]
+
+  // 摄影师专用导航
+  const photographerNavigation = [
+    { name: '个人中心', href: '/dashboard', icon: UserCircleIcon },
+    { name: '我的作品', href: '/my-photos', icon: CameraIcon },
+    { name: '我的上传', href: '/my-uploads', icon: CameraIcon },
+    { name: '我的预约', href: '/appointments', icon: HeartIcon },
+    { name: '设置', href: '/settings', icon: Cog6ToothIcon },
+  ]
 
 const adminNavigation = [
   { name: '管理仪表板', href: '/admin/dashboard', icon: Cog6ToothIcon },
@@ -146,14 +153,16 @@ export function Header() {
                     />
                   </div>
 
-                  {/* Upload Button */}
-                  <Link
-                    href="/upload"
-                    className="hidden sm:flex items-center space-x-1 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
-                  >
-                    <PlusIcon className="w-4 h-4" />
-                    <span>上传作品</span>
-                  </Link>
+                  {/* Upload Button - 仅摄影师和管理员可见 */}
+                  {(user?.role === 'photographer' || user?.role === 'admin') && (
+                    <Link
+                      href="/upload"
+                      className="hidden sm:flex items-center space-x-1 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      <span>上传作品</span>
+                    </Link>
+                  )}
 
                   {/* User Menu */}
                   <div className="relative group">
@@ -175,16 +184,51 @@ export function Header() {
                     {/* User Dropdown Menu */}
                     <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                       <div className="py-1">
-                        {userNavigation.map((item) => (
-                          <Link
-                            key={item.name}
-                            href={item.href}
-                            className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            <item.icon className="w-4 h-4" />
-                            <span>{item.name}</span>
-                          </Link>
-                        ))}
+                        {/* 根据用户角色显示不同的导航菜单 */}
+                        {(user?.role === 'photographer' || user?.role === 'admin') ? (
+                          photographerNavigation.map((item) => (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              <item.icon className="w-4 h-4" />
+                              <span>{item.name}</span>
+                            </Link>
+                          ))
+                        ) : (
+                          userNavigation.map((item) => (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              <item.icon className="w-4 h-4" />
+                              <span>{item.name}</span>
+                            </Link>
+                          ))
+                        )}
+                        
+                        {/* 管理员专用菜单 */}
+                        {user?.role === 'admin' && (
+                          <>
+                            <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                            <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              管理功能
+                            </div>
+                            {adminNavigation.map((item) => (
+                              <Link
+                                key={item.name}
+                                href={item.href}
+                                className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                              >
+                                <item.icon className="w-4 h-4" />
+                                <span>{item.name}</span>
+                              </Link>
+                            ))}
+                          </>
+                        )}
+                        
                         <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                         <button
                           onClick={handleLogout}
@@ -254,15 +298,17 @@ export function Header() {
                 {/* Mobile User Actions */}
                 {isAuthenticated ? (
                   <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
-                    {/* Upload Button */}
-                    <Link
-                      href="/upload"
-                      className="flex items-center space-x-2 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <PlusIcon className="w-4 h-4" />
-                      <span>上传作品</span>
-                    </Link>
+                    {/* Upload Button - 仅摄影师和管理员可见 */}
+                    {(user?.role === 'photographer' || user?.role === 'admin') && (
+                      <Link
+                        href="/upload"
+                        className="flex items-center space-x-2 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                        <span>上传作品</span>
+                      </Link>
+                    )}
 
                     {/* Admin Menu Items */}
                     {user?.role === 'admin' && (
@@ -285,18 +331,32 @@ export function Header() {
                       </>
                     )}
 
-                    {/* User Menu Items */}
-                    {userNavigation.map((item) => (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-pink-600 dark:hover:text-pink-400 px-3 py-2 text-base font-medium transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span>{item.name}</span>
-                      </Link>
-                    ))}
+                    {/* User Menu Items - 根据角色显示不同菜单 */}
+                    {(user?.role === 'photographer' || user?.role === 'admin') ? (
+                      photographerNavigation.map((item) => (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-pink-600 dark:hover:text-pink-400 px-3 py-2 text-base font-medium transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span>{item.name}</span>
+                        </Link>
+                      ))
+                    ) : (
+                      userNavigation.map((item) => (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-pink-600 dark:hover:text-pink-400 px-3 py-2 text-base font-medium transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span>{item.name}</span>
+                        </Link>
+                      ))
+                    )}
 
                     {/* Logout Button */}
                     <button

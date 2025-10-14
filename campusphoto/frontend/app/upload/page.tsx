@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'react-hot-toast'
 import CampusPhotoApi from '@/lib/api'
 import { AnalysisDisplay } from '@/components/ui/AnalysisDisplay'
@@ -30,15 +32,12 @@ interface UploadFormData {
   allowComments: boolean
   allowLikes: boolean
   theme: string
-  subcategory: string
 }
 
 interface AnalysisResult {
   recommended_theme: string
-  recommended_subcategory: string
   confidence: number
   available_themes: string[]
-  available_subcategories: string[]
   smart_tags: string[]
   analysis_details: {
     dominant_colors: any[]
@@ -49,6 +48,38 @@ interface AnalysisResult {
 
 export default function UploadPage() {
   const { user } = useAuth()
+  const router = useRouter()
+  
+  // 检查用户权限
+  useEffect(() => {
+    if (user && user.role === 'student') {
+      // 学生用户重定向到首页
+      router.push('/')
+      return
+    }
+  }, [user, router])
+
+  // 如果用户是学生，不渲染页面内容
+  if (user && user.role === 'student') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            访问受限
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            学生用户没有上传作品的权限
+          </p>
+          <Link
+            href="/"
+            className="inline-flex items-center px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+          >
+            返回首页
+          </Link>
+        </div>
+      </div>
+    )
+  }
   const [dragActive, setDragActive] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
@@ -66,14 +97,12 @@ export default function UploadPage() {
     isPublic: true,
     allowComments: true,
     allowLikes: true,
-    theme: '',
-    subcategory: ''
+    theme: ''
   })
   
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [availableThemes, setAvailableThemes] = useState<string[]>([])
-  const [availableSubcategories, setAvailableSubcategories] = useState<string[]>([])
   
   // 智能分析图片
   const analyzeImage = async (file: File) => {
@@ -97,16 +126,14 @@ export default function UploadPage() {
       const result: AnalysisResult = await response.json()
       setAnalysisResult(result)
       
-      // 设置推荐的主题和子分类
+      // 设置推荐的主题
       setFormData(prev => ({
         ...prev,
-        theme: result.recommended_theme,
-        subcategory: result.recommended_subcategory
+        theme: result.recommended_theme
       }))
       
       // 设置可选项
       setAvailableThemes(result.available_themes)
-      setAvailableSubcategories(result.available_subcategories)
       
       toast.success('智能分析完成！')
     } catch (error) {
@@ -117,20 +144,9 @@ export default function UploadPage() {
     }
   }
   
-  // 当主题改变时更新子分类选项
+  // 当主题改变时更新表单
   const handleThemeChange = (theme: string) => {
-    setFormData(prev => ({ ...prev, theme, subcategory: '' }))
-    
-    // 获取该主题的子分类
-    fetch('/api/photos/themes/categories')
-      .then(response => response.json())
-      .then(data => {
-        const subcategories = data.subcategories[theme] || []
-        setAvailableSubcategories(subcategories)
-      })
-      .catch(error => {
-        console.error('获取子分类失败:', error)
-      })
+    setFormData(prev => ({ ...prev, theme }))
   }
   
   // 如果用户未登录，显示登录提示
@@ -296,8 +312,7 @@ export default function UploadPage() {
           isPublic: true,
           allowComments: true,
           allowLikes: true,
-          theme: '',
-          subcategory: ''
+          theme: ''
         })
         setShowAnalysis(false)
         setUploadedPhotos([])
@@ -478,7 +493,7 @@ export default function UploadPage() {
                         </span>
                       </div>
                       <p className="text-sm text-blue-700 dark:text-blue-300">
-                        推荐分类: <strong>{analysisResult.recommended_theme}</strong> - {analysisResult.recommended_subcategory}
+                        推荐分类: <strong>{analysisResult.recommended_theme}</strong>
                       </p>
                       {analysisResult.smart_tags.length > 0 && (
                         <div className="mt-2">
@@ -516,25 +531,6 @@ export default function UploadPage() {
                     </select>
                   </div>
                   
-                  {/* 子分类选择 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      子分类
-                    </label>
-                    <select
-                      name="subcategory"
-                      value={formData.subcategory}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="">请选择子分类</option>
-                      {availableSubcategories.map((subcategory) => (
-                        <option key={subcategory} value={subcategory}>
-                          {subcategory}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                   
                   {/* 重新分析按钮 */}
                   {uploadedFiles.length > 0 && (
